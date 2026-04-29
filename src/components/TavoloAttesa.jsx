@@ -1,61 +1,98 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./TavoloAttesa.css";
-import avatarMale from "../assets/avatars/avatar-male.png";
 import avatarFemale from "../assets/avatars/avatar-female.png";
+import avatarMale from "../assets/avatars/avatar-male.png";
+import frecceSvg from "../assets/icons/frecce.svg";
+import genderSvg from "../assets/icons/gender.svg";
 
-function TavoloAttesa() {
+const initialPlayers = [
+    { id: 1, label: "Giocatore 1", name: "TIZIO", gender: "female" },
+    { id: 2, label: "Giocatore 2", name: "CAIO", gender: "male" },
+    { id: 3, label: "Giocatore 3", name: "TIZIO", gender: "female" },
+    { id: 4, label: "Giocatore 4", name: "SEMPRONIO", gender: "male" },
+    { id: 5, label: "Giocatore 5", name: "LIVIA", gender: "female" },
+    { id: 6, label: "Giocatore 6", name: "MARCO", gender: "male" },
+];
+
+export default function TavoloAttesa() {
     const navigate = useNavigate();
     const location = useLocation();
     const mode = location.state?.mode;
 
-    const players = [
-        { id: 1, title: "Giocatore 1", name: "TIZIO", avatar: avatarFemale },
-        { id: 2, title: "Giocatore 2", name: "CAIO", avatar: avatarMale },
-        { id: 3, title: "Giocatore 3", name: "SEMPRONIA", avatar: avatarFemale },
-        { id: 4, title: "Giocatore 4", name: "FILIPPO", avatar: avatarMale },
-    ];
+    const [players, setPlayers] = useState(initialPlayers);
+
+    const toggleAvatar = (id) => {
+        setPlayers((prev) =>
+            prev.map((p) =>
+                p.id === id
+                    ? { ...p, gender: p.gender === "female" ? "male" : "female" }
+                    : p
+            )
+        );
+    };
+
+    const handleAnnulla = () => {
+        navigate(mode === "join" ? "/unisciti" : "/crea-partita");
+    };
 
     return (
-        <div className="attesa-page">
-            <div className="attesa-panel">
-                <h1 className="attesa-title">STANZA D'ATTESA</h1>
+        <main className="attesa-page" aria-label="Tavolo di attesa">
+            <section className="attesa-screen">
 
-                <p className="attesa-mode">
-                    {mode === "create" ? "Hai creato il tavolo" : "Sei entrato nel tavolo"}
-                </p>
+                {/* Code badge */}
+                <div className="attesa-code">
+                    <span>Code: 79531</span>
+                </div>
 
-                <div className="attesa-list">
+                {/* Icons row */}
+                <div className="attesa-icons">
+                    <img src={frecceSvg} alt="frecce" className="attesa-icon" />
+                    <img src={genderSvg} alt="gender" className="attesa-icon" />
+                </div>
+
+                {/* Scrollable player list */}
+                <ol className="attesa-list" aria-label="Giocatori in attesa">
                     {players.map((player) => (
-                        <div key={player.id} className="attesa-player">
-                            <img
-                                src={player.avatar}
-                                alt={player.name}
-                                className="attesa-player-avatar"
-                            />
-
+                        <li key={player.id} className="attesa-player">
+                            <button
+                                className="attesa-avatar-btn"
+                                onClick={() => toggleAvatar(player.id)}
+                                aria-label={`Cambia avatar ${player.label}`}
+                            >
+                                <img
+                                    src={player.gender === "female" ? avatarFemale : avatarMale}
+                                    alt={player.gender}
+                                    className="attesa-avatar"
+                                />
+                            </button>
                             <div className="attesa-player-info">
-                                <span className="attesa-player-title">{player.title}</span>
+                                <span className="attesa-player-label">{player.label}</span>
                                 <span className="attesa-player-name">{player.name}</span>
                             </div>
-                        </div>
+                        </li>
                     ))}
-                </div>
+                </ol>
 
+                {/* Action buttons */}
                 <div className="attesa-actions">
                     <button
-                        className="attesa-btn secondary"
-                        onClick={() => navigate("/unisciti")}
+                        className="attesa-btn attesa-btn--gioca"
+                        type="button"
+                        onClick={() => navigate("/gioco")}
                     >
-                        INDIETRO
-                    </button>
-
-                    <button className="attesa-btn primary">
                         INIZIA
                     </button>
+                    <button
+                        className="attesa-btn attesa-btn--annulla"
+                        type="button"
+                        onClick={handleAnnulla}
+                    >
+                        ANNULLA
+                    </button>
                 </div>
-            </div>
-        </div>
+
+            </section>
+        </main>
     );
 }
-
-export default TavoloAttesa;

@@ -31,6 +31,7 @@ export default function CreaPartita() {
                     type="button"
                     className="crea-partita-primary-button"
                     aria-label={`Avvia partita con ${selectedPlayers} giocatori`}
+                    onClick={() => navigate("/attesa", { state: { mode: "create", players: selectedPlayers } })}
                 >
                     AVVIA PARTITA
                 </button>
@@ -39,7 +40,7 @@ export default function CreaPartita() {
                     type="button"
                     className="crea-partita-secondary-button"
                     aria-label="Annulla"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/accesso")}
                 >
                     ANNULLA
                 </button>

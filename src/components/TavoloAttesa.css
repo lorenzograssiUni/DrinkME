@@ -1,98 +1,218 @@
 .attesa-page {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #3c3c3c;
-    padding: 24px;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: #ffffff;
 }
 
-.attesa-panel {
-    width: 100%;
-    max-width: 520px;
-    background: #f5deb3;
-    border: 4px solid #5c3b17;
-    border-radius: 18px;
-    padding: 28px 24px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-}
-
-.attesa-title {
-    margin: 0 0 10px;
-    text-align: center;
-    font-size: 32px;
-    color: #5c3b17;
-}
-
-.attesa-mode {
-    margin: 0 0 22px;
-    text-align: center;
-    font-size: 16px;
-    color: #6d4a23;
-}
-
-.attesa-list {
+.attesa-screen {
+    width: min(100%, 402px);
+    aspect-ratio: 402 / 894;
+    background-image: url("../assets/images/tavolo-attesa-bg.jpg");
+    background-size: 125.684% 116.443%;
+    background-position: -51.125px -76px;
+    background-repeat: no-repeat;
+    background-color: lightgray;
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    margin-bottom: 24px;
+    align-items: center;
+    padding: 199px 74px 108px 75px;
+    gap: 50px;
+    box-sizing: border-box;
 }
 
+/* Code badge */
+.attesa-code {
+    position: absolute;
+    top: 168px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #229294;
+    border-radius: 999px;
+    padding: 6px 20px;
+    white-space: nowrap;
+}
+
+    .attesa-code span {
+        font-family: "PaulGrotesk", Arial, sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+    }
+
+/* Icons row */
+.attesa-icons {
+    position: absolute;
+    top: 212px;
+    left: 82px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.attesa-icon {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+}
+
+/* Scrollable player list card */
+.attesa-list {
+    position: absolute;
+    top: 240px;
+    left: 75px;
+    width: 252px;
+    height: 310px;
+    overflow-y: auto;
+    list-style: none;
+    padding: 5px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: rgba(237, 214, 170, 0.85);
+    border: 2px dashed #7e7618;
+    border-radius: 12px;
+    box-sizing: border-box;
+    /* scrollbar sottile */
+    scrollbar-width: thin;
+    scrollbar-color: #7e7618 transparent;
+}
+
+    .attesa-list::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .attesa-list::-webkit-scrollbar-thumb {
+        background: #7e7618;
+        border-radius: 4px;
+    }
+
+/* Single player row */
 .attesa-player {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: #fff2d8;
-    border: 2px solid #c89f6a;
-    border-radius: 14px;
-    padding: 12px;
+    gap: 9px;
+    background: #edd6aa;
+    border: 1.5px solid #c89f6a;
+    border-radius: 10px;
+    padding: 6px 8px;
+    flex-shrink: 0;
 }
 
-.attesa-player-avatar {
-    width: 58px;
-    height: 58px;
+/* Avatar button */
+.attesa-avatar-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    border-radius: 6px;
+    transition: transform 160ms ease, filter 160ms ease;
+}
+
+    .attesa-avatar-btn:active {
+        transform: scale(0.95);
+    }
+
+    .attesa-avatar-btn:focus-visible {
+        outline: 2px solid #4e4912;
+        outline-offset: 2px;
+    }
+
+.attesa-avatar {
+    width: 52px;
+    height: 67px;
     object-fit: cover;
-    border-radius: 12px;
-    border: 2px solid #7a5328;
+    border-radius: 6px;
+    border: 2px solid #4e4912;
+    display: block;
 }
 
+/* Player text */
 .attesa-player-info {
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
-.attesa-player-title {
-    font-size: 14px;
-    color: #7b5a33;
+.attesa-player-label {
+    font-family: "PaulGrotesk", Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #7e7618;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    line-height: 1;
 }
 
 .attesa-player-name {
+    font-family: "PaulGrotesk", Arial, sans-serif;
     font-size: 20px;
     font-weight: 700;
-    color: #4a2e12;
+    color: #4e4912;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+    line-height: 1.1;
 }
 
+/* Action buttons */
 .attesa-actions {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    gap: 12px;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
 }
 
 .attesa-btn {
-    border: none;
-    border-radius: 12px;
-    padding: 12px 20px;
-    font-size: 16px;
+    width: 194px;
+    padding: 12px 18px;
+    border: 2px solid #4e4912;
+    border-radius: 999px;
+    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.55);
+    font-family: "PaulGrotesk", Arial, sans-serif;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
     font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 4px 4px rgba(0, 0, 0, 0.73);
     cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
-    .attesa-btn.primary {
-        background: #8b5a2b;
-        color: white;
+.attesa-btn--gioca {
+    background: #e2b04e;
+}
+
+.attesa-btn--annulla {
+    background: #c93e37;
+}
+
+.attesa-btn:active {
+    transform: scale(0.97);
+}
+
+.attesa-btn:focus-visible {
+    outline: 3px solid #111;
+    outline-offset: 4px;
+}
+
+@media (max-width: 420px) {
+    .attesa-page {
+        padding: 0;
     }
 
-    .attesa-btn.secondary {
-        background: #d2b48c;
-        color: #4a2e12;
+    .attesa-screen {
+        width: 100vw;
+        aspect-ratio: 402 / 894;
     }
+}

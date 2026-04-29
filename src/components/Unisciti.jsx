@@ -14,15 +14,13 @@ export default function Unisciti() {
 
     const handleSubmit = (event) => {
         event.preventDefault()
-
         if (code.length !== 5) return
-
-        console.log("Codice stanza:", code)
+        navigate("/attesa", { state: { mode: "join", code } })
     }
 
     const handleCancel = () => {
         setCode("")
-        navigate("/")
+        navigate("/accesso")
     }
 
     return (
