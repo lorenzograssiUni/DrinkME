@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="drinkme.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+</Solution>

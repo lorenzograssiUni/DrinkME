@@ -1,0 +1,171 @@
+.unisciti-page {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: #ffffff;
+}
+
+.unisciti-screen {
+    width: min(100%, 402px);
+    aspect-ratio: 402 / 894;
+    position: relative;
+    overflow: hidden;
+    background-image: url("../assets/images/crea-partita-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.unisciti-title {
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 320px;
+    text-align: center;
+    font-family: "CorpSansRdAlt", Arial, sans-serif;
+    font-size: 48px;
+    line-height: 0.95;
+    letter-spacing: 0.02em;
+    color: #d9a441;
+    -webkit-text-stroke: 2px #4e4912;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.unisciti-form {
+    position: absolute;
+    top: 304px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 332px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+}
+
+.unisciti-subtitle {
+    min-height: 46px;
+    padding: 10px 18px;
+    border: 2px solid #4e4912;
+    border-radius: 999px;
+    background: #e2b04e;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "PaulGrotesk", Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #562f06;
+    white-space: nowrap;
+}
+
+.unisciti-code-card {
+    display: inline-flex;
+    padding: 5px;
+    border: 2px solid #4e4912;
+    border-radius: 18px;
+    background: #edd6aa;
+    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+}
+
+.unisciti-code-card-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 8px 12px;
+    border: 2px dashed #7e7518;
+    border-radius: 14px;
+}
+
+.unisciti-code-symbol {
+    font-family: Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    color: #562f06;
+    flex: 0 0 auto;
+}
+
+.unisciti-code-input {
+    width: 5.5ch;
+    border: 0;
+    outline: none;
+    background: transparent;
+    text-align: left;
+    font-family: Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #562f06;
+}
+
+    .unisciti-code-input::placeholder {
+        color: #562f06;
+        opacity: 1;
+    }
+
+.unisciti-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+}
+
+.unisciti-primary-button,
+.unisciti-secondary-button {
+    min-height: 57px;
+    border: 2px solid #4e4912;
+    border-radius: 999px;
+    color: #ffffff;
+    font-family: "PaulGrotesk", Arial, sans-serif;
+    font-size: 35px;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 4px 4px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.unisciti-primary-button {
+    width: 194px;
+    background: #e2b84e;
+}
+
+    .unisciti-primary-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+.unisciti-secondary-button {
+    width: 194px;
+    background: #c93e37;
+}
+
+    .unisciti-primary-button:active,
+    .unisciti-secondary-button:active {
+        transform: scale(0.98);
+    }
+
+    .unisciti-code-input:focus-visible,
+    .unisciti-primary-button:focus-visible,
+    .unisciti-secondary-button:focus-visible {
+        outline: 3px solid #111;
+        outline-offset: 3px;
+    }
+
+@media (max-width: 420px) {
+    .unisciti-page {
+        padding: 0;
+    }
+
+    .unisciti-screen {
+        width: 100vw;
+        aspect-ratio: 402 / 894;
+    }
+}

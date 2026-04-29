@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+.env
+.env.*
