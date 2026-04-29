@@ -19,66 +19,76 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 199px 74px 108px 75px;
-    gap: 50px;
+    justify-content: flex-end;
+    padding-bottom: 90px;
     box-sizing: border-box;
 }
 
-/* Code badge */
-.attesa-code {
+/* Card principale beige con bordo tratteggiato */
+.attesa-panel {
     position: absolute;
-    top: 168px;
+    top: 195px;
     left: 50%;
     transform: translateX(-50%);
+    width: 252px;
+    background: rgba(237, 214, 170, 0.92);
+    border: 2px dashed #7e7618;
+    border-radius: 14px;
+    padding: 10px 10px 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Badge codice verde */
+.attesa-code {
     background: #229294;
     border-radius: 999px;
-    padding: 6px 20px;
-    white-space: nowrap;
+    padding: 5px 18px;
+    align-self: center;
 }
 
     .attesa-code span {
         font-family: "PaulGrotesk", Arial, sans-serif;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
         color: #ffffff;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+        white-space: nowrap;
     }
 
-/* Icons row */
-.attesa-icons {
-    position: absolute;
-    top: 212px;
-    left: 82px;
+/* Card icone frecce + gender */
+.attesa-icons-card {
+    background: rgba(200, 159, 106, 0.5);
+    border: 1.5px solid #7e7618;
+    border-radius: 8px;
+    padding: 4px 10px;
     display: flex;
-    gap: 6px;
+    flex-direction: row;
     align-items: center;
+    gap: 8px;
+    align-self: flex-start;
 }
 
 .attesa-icon {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     object-fit: contain;
 }
 
-/* Scrollable player list card */
+/* Lista giocatori scrollabile */
 .attesa-list {
-    position: absolute;
-    top: 240px;
-    left: 75px;
-    width: 252px;
-    height: 310px;
+    width: 100%;
+    max-height: 280px;
     overflow-y: auto;
     list-style: none;
-    padding: 5px;
+    padding: 0;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    background: rgba(237, 214, 170, 0.85);
-    border: 2px dashed #7e7618;
-    border-radius: 12px;
-    box-sizing: border-box;
-    /* scrollbar sottile */
+    gap: 6px;
     scrollbar-width: thin;
     scrollbar-color: #7e7618 transparent;
 }
@@ -92,7 +102,7 @@
         border-radius: 4px;
     }
 
-/* Single player row */
+/* Singola riga giocatore */
 .attesa-player {
     display: flex;
     align-items: center;
@@ -104,7 +114,7 @@
     flex-shrink: 0;
 }
 
-/* Avatar button */
+/* Pulsante avatar */
 .attesa-avatar-btn {
     background: none;
     border: none;
@@ -112,7 +122,7 @@
     cursor: pointer;
     flex-shrink: 0;
     border-radius: 6px;
-    transition: transform 160ms ease, filter 160ms ease;
+    transition: transform 160ms ease;
 }
 
     .attesa-avatar-btn:active {
@@ -133,7 +143,7 @@
     display: block;
 }
 
-/* Player text */
+/* Testo giocatore */
 .attesa-player-info {
     display: flex;
     flex-direction: column;
@@ -158,16 +168,16 @@
     line-height: 1.1;
 }
 
-/* Action buttons */
+/* Pulsanti INIZIA / ANNULLA */
 .attesa-actions {
     position: absolute;
-    bottom: 90px;
+    bottom: 55px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
 }
 
 .attesa-btn {
@@ -177,12 +187,12 @@
     border-radius: 999px;
     box-shadow: 0 4px 4px rgba(0, 0, 0, 0.55);
     font-family: "PaulGrotesk", Arial, sans-serif;
-    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    font-size: clamp(1.4rem, 4.5vw, 2rem);
     font-weight: 700;
     color: #ffffff;
     text-shadow: 0 4px 4px rgba(0, 0, 0, 0.73);
     cursor: pointer;
-    transition: transform 160ms ease, filter 160ms ease;
+    transition: transform 160ms ease;
     display: flex;
     align-items: center;
     justify-content: center;

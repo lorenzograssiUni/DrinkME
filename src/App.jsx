@@ -3,6 +3,7 @@ import Accesso from "./components/Accesso";
 import CreaPartita from "./components/CreaPartita";
 import Unisciti from "./components/Unisciti";
 import TavoloAttesa from "./components/TavoloAttesa";
+import Gioco from "./components/Gioco";
 
 function App() {
     return (
@@ -12,6 +13,7 @@ function App() {
             <Route path="/crea-partita" element={<CreaPartita />} />
             <Route path="/unisciti" element={<Unisciti />} />
             <Route path="/attesa" element={<TavoloAttesa />} />
+            <Route path="/gioco" element={<Gioco />} />
         </Routes>
     );
 }

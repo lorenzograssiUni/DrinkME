@@ -19,7 +19,6 @@ export default function TavoloAttesa() {
     const navigate = useNavigate();
     const location = useLocation();
     const mode = location.state?.mode;
-
     const [players, setPlayers] = useState(initialPlayers);
 
     const toggleAvatar = (id) => {
@@ -40,41 +39,46 @@ export default function TavoloAttesa() {
         <main className="attesa-page" aria-label="Tavolo di attesa">
             <section className="attesa-screen">
 
-                {/* Code badge */}
-                <div className="attesa-code">
-                    <span>Code: 79531</span>
+                {/* Card principale con codice + icone + lista */}
+                <div className="attesa-panel">
+
+                    {/* Badge codice */}
+                    <div className="attesa-code">
+                        <span>Code: 79531</span>
+                    </div>
+
+                    {/* Card icone */}
+                    <div className="attesa-icons-card">
+                        <img src={frecceSvg} alt="frecce" className="attesa-icon" />
+                        <img src={genderSvg} alt="gender" className="attesa-icon" />
+                    </div>
+
+                    {/* Lista giocatori scrollabile */}
+                    <ol className="attesa-list" aria-label="Giocatori in attesa">
+                        {players.map((player) => (
+                            <li key={player.id} className="attesa-player">
+                                <button
+                                    className="attesa-avatar-btn"
+                                    onClick={() => toggleAvatar(player.id)}
+                                    aria-label={`Cambia avatar ${player.label}`}
+                                >
+                                    <img
+                                        src={player.gender === "female" ? avatarFemale : avatarMale}
+                                        alt={player.gender}
+                                        className="attesa-avatar"
+                                    />
+                                </button>
+                                <div className="attesa-player-info">
+                                    <span className="attesa-player-label">{player.label}</span>
+                                    <span className="attesa-player-name">{player.name}</span>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+
                 </div>
 
-                {/* Icons row */}
-                <div className="attesa-icons">
-                    <img src={frecceSvg} alt="frecce" className="attesa-icon" />
-                    <img src={genderSvg} alt="gender" className="attesa-icon" />
-                </div>
-
-                {/* Scrollable player list */}
-                <ol className="attesa-list" aria-label="Giocatori in attesa">
-                    {players.map((player) => (
-                        <li key={player.id} className="attesa-player">
-                            <button
-                                className="attesa-avatar-btn"
-                                onClick={() => toggleAvatar(player.id)}
-                                aria-label={`Cambia avatar ${player.label}`}
-                            >
-                                <img
-                                    src={player.gender === "female" ? avatarFemale : avatarMale}
-                                    alt={player.gender}
-                                    className="attesa-avatar"
-                                />
-                            </button>
-                            <div className="attesa-player-info">
-                                <span className="attesa-player-label">{player.label}</span>
-                                <span className="attesa-player-name">{player.name}</span>
-                            </div>
-                        </li>
-                    ))}
-                </ol>
-
-                {/* Action buttons */}
+                {/* Pulsanti azione */}
                 <div className="attesa-actions">
                     <button
                         className="attesa-btn attesa-btn--gioca"
