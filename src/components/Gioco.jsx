@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Gioco.css";
 import giocatoriSvg from "../assets/icons/giocatori.svg";
@@ -26,8 +26,21 @@ export default function Gioco() {
     const [mazzo, setMazzo] = useState(creaMazzo());
     const [cartaVisibile, setCarta] = useState(null);
     const [scoperta, setScoperta] = useState(false);
+    const [menuAperto, setMenuAperto] = useState(false);
 
+    const menuRef = useRef(null);
     const carteRimaste = mazzo.length;
+
+    // Chiudi il menu cliccando fuori
+    useEffect(() => {
+        function handleOutside(e) {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setMenuAperto(false);
+            }
+        }
+        if (menuAperto) document.addEventListener("mousedown", handleOutside);
+        return () => document.removeEventListener("mousedown", handleOutside);
+    }, [menuAperto]);
 
     const handleClick = useCallback(() => {
         if (!scoperta) {
@@ -42,6 +55,23 @@ export default function Gioco() {
         }
     }, [scoperta, mazzo]);
 
+    const handleRicomincia = () => {
+        setMazzo(creaMazzo());
+        setCarta(null);
+        setScoperta(false);
+        setMenuAperto(false);
+    };
+
+    const handleEsci = () => {
+        setMenuAperto(false);
+        navigate("/accesso");
+    };
+
+    const handleClassifica = () => {
+        setMenuAperto(false);
+        navigate("/classifica");
+    };
+
     return (
         <main className="gioco-page" aria-label="Schermata di gioco">
             <section className="gioco-screen">
@@ -53,13 +83,46 @@ export default function Gioco() {
                         <span>Giocatori</span>
                     </button>
 
-                    <div className="gioco-nav-right">
+                    <div className="gioco-nav-right" ref={menuRef}>
                         <button className="gioco-nav-icon-btn" aria-label="Aiuto">
                             <img src={aiutoSvg} alt="" />
                         </button>
-                        <button className="gioco-nav-icon-btn" aria-label="Menu">
+                        <button
+                            className="gioco-nav-icon-btn"
+                            aria-label="Menu"
+                            aria-expanded={menuAperto}
+                            onClick={() => setMenuAperto((v) => !v)}
+                        >
                             <img src={menuSvg} alt="" />
                         </button>
+
+                        {/* ── DROPDOWN MENU ── */}
+                        {menuAperto && (
+                            <div className="gioco-dropdown" role="menu">
+                                <button
+                                    className="gioco-dropdown-item"
+                                    role="menuitem"
+                                    onClick={handleRicomincia}
+                                >
+                                    🔄 Ricomincia partita
+                                </button>
+                                <button
+                                    className="gioco-dropdown-item"
+                                    role="menuitem"
+                                    onClick={handleClassifica}
+                                >
+                                    🏆 Classifica
+                                </button>
+                                <div className="gioco-dropdown-divider" />
+                                <button
+                                    className="gioco-dropdown-item gioco-dropdown-item--danger"
+                                    role="menuitem"
+                                    onClick={handleEsci}
+                                >
+                                    🚪 Esci dalla partita
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </nav>
 
