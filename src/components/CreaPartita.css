@@ -57,7 +57,7 @@
 
 .crea-partita-selector {
     position: absolute;
-    top: 362px;
+    top: 390px;
     left: 50%;
     transform: translateX(-50%);
     width: 332px;
@@ -77,12 +77,12 @@
 
 .numero-chip {
     display: flex;
-    justify-content: center;
+    justify-content: stretch;
     cursor: pointer;
 }
 
 .numero-chip-inner {
-    min-width: 62px;
+    width: 100%;
     min-height: 52px;
     padding: 5px;
     border: 2px solid #4e4912;
@@ -91,6 +91,7 @@
     box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
 }
 
