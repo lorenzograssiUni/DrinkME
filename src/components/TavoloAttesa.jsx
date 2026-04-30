@@ -5,37 +5,48 @@ import avatarFemale from "../assets/avatars/avatar-female.png";
 import avatarMale from "../assets/avatars/avatar-male.png";
 import frecceSvg from "../assets/icons/frecce.svg";
 import genderSvg from "../assets/icons/gender.svg";
+import { socket } from "../socket";
 
 const PLACEHOLDER = "INSERISCI NOME";
-
-const initialPlayers = [
-    { id: 1, label: "Giocatore 1", name: "", gender: "female" },
-    { id: 2, label: "Giocatore 2", name: "", gender: "male" },
-    { id: 3, label: "Giocatore 3", name: "", gender: "female" },
-    { id: 4, label: "Giocatore 4", name: "", gender: "male" },
-    { id: 5, label: "Giocatore 5", name: "", gender: "female" },
-    { id: 6, label: "Giocatore 6", name: "", gender: "male" },
-];
 
 export default function TavoloAttesa() {
     const navigate = useNavigate();
     const location = useLocation();
-    const mode = location.state?.mode;
+    const { roomCode, playerIndex, maxPlayers, isHost, mode } = location.state ?? {};
 
-    // Se arriva da "Ricomincia", ripristina i nomi salvati
-    const savedGiocatori = location.state?.giocatori;
-    const restoredPlayers = savedGiocatori
-        ? initialPlayers.map((p, i) => ({
-            ...p,
-            name: savedGiocatori[i] !== PLACEHOLDER ? (savedGiocatori[i] ?? "") : "",
-        }))
-        : initialPlayers;
-
-    const [players, setPlayers] = useState(restoredPlayers);
+    const [players, setPlayers] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [editingVal, setEditingVal] = useState("");
     const inputRef = useRef(null);
 
+    // ── Socket listeners ──────────────────────────────────────────────────────
+    useEffect(() => {
+        const onPlayersUpdated = (updatedPlayers) => setPlayers(updatedPlayers);
+
+        const onGameStarted = ({ players: p, currentPlayerIndex, deck }) => {
+            navigate("/gioco", {
+                state: {
+                    roomCode,
+                    playerIndex,
+                    isHost,
+                    players: p,
+                    currentPlayerIndex,
+                    deckCount: deck.length,
+                },
+            });
+        };
+
+        socket.on("players-updated", onPlayersUpdated);
+        socket.on("game-started", onGameStarted);
+
+        // Richiedi la lista corrente (host la ha già, guest la riceve via players-updated)
+        return () => {
+            socket.off("players-updated", onPlayersUpdated);
+            socket.off("game-started", onGameStarted);
+        };
+    }, [navigate, roomCode, playerIndex, isHost]);
+
+    // ── Autofocus input ───────────────────────────────────────────────────────
     useEffect(() => {
         if (editingId !== null && inputRef.current) {
             inputRef.current.focus();
@@ -43,26 +54,22 @@ export default function TavoloAttesa() {
         }
     }, [editingId]);
 
-    const toggleAvatar = (id) => {
-        setPlayers((prev) =>
-            prev.map((p) =>
-                p.id === id
-                    ? { ...p, gender: p.gender === "female" ? "male" : "female" }
-                    : p
-            )
-        );
+    // ── Handlers ──────────────────────────────────────────────────────────────
+    const toggleAvatar = (player) => {
+        if (player.index !== playerIndex) return; // solo il tuo avatar
+        const newGender = player.gender === "female" ? "male" : "female";
+        socket.emit("update-player", { gender: newGender });
     };
 
     const startEdit = (player) => {
-        setEditingId(player.id);
+        if (player.index !== playerIndex) return; // solo il tuo nome
+        setEditingId(player.index);
         setEditingVal(player.name);
     };
 
     const commitEdit = () => {
         const trimmed = editingVal.trim().toUpperCase();
-        setPlayers((prev) =>
-            prev.map((p) => (p.id === editingId ? { ...p, name: trimmed } : p))
-        );
+        socket.emit("update-player", { name: trimmed });
         setEditingId(null);
         setEditingVal("");
     };
@@ -72,19 +79,22 @@ export default function TavoloAttesa() {
         if (e.key === "Escape") { setEditingId(null); setEditingVal(""); }
     };
 
+    const handleIniziaGioco = () => {
+        socket.emit("start-game");
+    };
+
     const handleAnnulla = () => {
+        socket.disconnect();
         navigate(mode === "join" ? "/unisciti" : "/crea-partita");
     };
 
-    const handleIniziaGioco = () => {
-        navigate("/gioco", {
-            state: {
-                playerName: players[0].name || PLACEHOLDER,
-                giocatori: players.map((p) => p.name || PLACEHOLDER),
-                mode,
-            },
-        });
-    };
+    // ── Slot vuoti (giocatori non ancora connessi) ────────────────────────────
+    const slotList = Array.from({ length: maxPlayers ?? 6 }, (_, i) => {
+        return players.find(p => p.index === i) ?? { index: i, name: "", gender: i % 2 === 0 ? "female" : "male", connected: false, empty: true };
+    });
+
+    const connectedCount = players.filter(p => p.connected).length;
+    const canStart = isHost && connectedCount >= 2;
 
     return (
         <main className="attesa-page" aria-label="Tavolo di attesa">
@@ -94,7 +104,7 @@ export default function TavoloAttesa() {
                     <div className="attesa-panel-inner">
 
                         <div className="attesa-code">
-                            <span>Code: 79531</span>
+                            <span>Code: {roomCode ?? "—"}</span>
                         </div>
 
                         <div className="attesa-icons-card">
@@ -103,62 +113,85 @@ export default function TavoloAttesa() {
                         </div>
 
                         <ol className="attesa-list" aria-label="Giocatori in attesa">
-                            {players.map((player) => (
-                                <li key={player.id} className="attesa-player">
-                                    <button
-                                        className="attesa-avatar-btn"
-                                        onClick={() => toggleAvatar(player.id)}
-                                        aria-label={`Cambia avatar ${player.label}`}
+                            {slotList.map((player) => {
+                                const isMine = player.index === playerIndex;
+                                const isEmpty = player.empty;
+
+                                return (
+                                    <li
+                                        key={player.index}
+                                        className={`attesa-player ${isEmpty ? "attesa-player--empty" : ""} ${!player.connected && !isEmpty ? "attesa-player--disconnected" : ""}`}
                                     >
-                                        <img
-                                            src={player.gender === "female" ? avatarFemale : avatarMale}
-                                            alt={player.gender}
-                                            className="attesa-avatar"
-                                        />
-                                    </button>
-
-                                    <div className="attesa-player-info">
-                                        <span className="attesa-player-label">{player.label}</span>
-
-                                        {editingId === player.id ? (
-                                            <input
-                                                ref={inputRef}
-                                                className="attesa-player-name-input"
-                                                value={editingVal}
-                                                onChange={(e) => setEditingVal(e.target.value)}
-                                                onBlur={commitEdit}
-                                                onKeyDown={handleKeyDown}
-                                                maxLength={16}
-                                                aria-label={`Modifica nome ${player.label}`}
+                                        <button
+                                            className="attesa-avatar-btn"
+                                            onClick={() => toggleAvatar(player)}
+                                            disabled={!isMine || isEmpty}
+                                            aria-label={`Cambia avatar Giocatore ${player.index + 1}`}
+                                        >
+                                            <img
+                                                src={player.gender === "female" ? avatarFemale : avatarMale}
+                                                alt={player.gender}
+                                                className="attesa-avatar"
+                                                style={{ opacity: isEmpty ? 0.3 : 1 }}
                                             />
-                                        ) : (
-                                            <span
-                                                className={`attesa-player-name attesa-player-name--editable ${!player.name ? "attesa-player-name--placeholder" : ""}`}
-                                                onClick={() => startEdit(player)}
-                                                role="button"
-                                                tabIndex={0}
-                                                onKeyDown={(e) => e.key === "Enter" && startEdit(player)}
-                                                aria-label={`Modifica nome: ${player.name || PLACEHOLDER}`}
-                                            >
-                                                {player.name || PLACEHOLDER}
+                                        </button>
+
+                                        <div className="attesa-player-info">
+                                            <span className="attesa-player-label">
+                                                Giocatore {player.index + 1}
+                                                {!isEmpty && !player.connected && " — disconnesso"}
                                             </span>
-                                        )}
-                                    </div>
-                                </li>
-                            ))}
+
+                                            {isEmpty ? (
+                                                <span className="attesa-player-name attesa-player-name--placeholder">
+                                                    In attesa...
+                                                </span>
+                                            ) : editingId === player.index ? (
+                                                <input
+                                                    ref={inputRef}
+                                                    className="attesa-player-name-input"
+                                                    value={editingVal}
+                                                    onChange={(e) => setEditingVal(e.target.value)}
+                                                    onBlur={commitEdit}
+                                                    onKeyDown={handleKeyDown}
+                                                    maxLength={16}
+                                                />
+                                            ) : (
+                                                <span
+                                                    className={`attesa-player-name ${isMine ? "attesa-player-name--editable" : ""} ${!player.name ? "attesa-player-name--placeholder" : ""}`}
+                                                    onClick={() => startEdit(player)}
+                                                    role={isMine ? "button" : undefined}
+                                                    tabIndex={isMine ? 0 : undefined}
+                                                    onKeyDown={(e) => e.key === "Enter" && startEdit(player)}
+                                                >
+                                                    {player.name || PLACEHOLDER}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ol>
 
                     </div>
                 </div>
 
                 <div className="attesa-actions">
-                    <button
-                        className="attesa-btn attesa-btn--gioca"
-                        type="button"
-                        onClick={handleIniziaGioco}
-                    >
-                        INIZIA
-                    </button>
+                    {isHost ? (
+                        <button
+                            className="attesa-btn attesa-btn--gioca"
+                            type="button"
+                            disabled={!canStart}
+                            onClick={handleIniziaGioco}
+                            style={{ opacity: canStart ? 1 : 0.5 }}
+                        >
+                            INIZIA
+                        </button>
+                    ) : (
+                        <div className="attesa-waiting-msg">
+                            In attesa dell'host...
+                        </div>
+                    )}
                     <button
                         className="attesa-btn attesa-btn--annulla"
                         type="button"

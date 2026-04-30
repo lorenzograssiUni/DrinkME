@@ -1,11 +1,35 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import "./CreaPartita.css"
-import NumeroGiocatori from "./NumeroGiocatori"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./CreaPartita.css";
+import NumeroGiocatori from "./NumeroGiocatori";
+import { socket } from "../socket";
 
 export default function CreaPartita() {
-    const [selectedPlayers, setSelectedPlayers] = useState(3)
-    const navigate = useNavigate()
+    const [selectedPlayers, setSelectedPlayers] = useState(3);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const navigate = useNavigate();
+
+    const handleAvvia = () => {
+        setLoading(true);
+        setError("");
+
+        if (!socket.connected) socket.connect();
+
+        socket.emit("create-room", { numPlayers: selectedPlayers }, (res) => {
+            setLoading(false);
+            if (!res.ok) { setError("Errore nella creazione della stanza."); return; }
+            navigate("/attesa", {
+                state: {
+                    mode: "create",
+                    roomCode: res.code,
+                    playerIndex: res.playerIndex,
+                    maxPlayers: res.maxPlayers,
+                    isHost: true,
+                },
+            });
+        });
+    };
 
     return (
         <main className="crea-partita-page" aria-label="Crea partita">
@@ -16,35 +40,31 @@ export default function CreaPartita() {
                     PARTITA
                 </h1>
 
-                <div className="crea-partita-subtitle">
-                    NUMERO DI GIOCATORI
-                </div>
+                <div className="crea-partita-subtitle">NUMERO DI GIOCATORI</div>
 
                 <div className="crea-partita-selector">
-                    <NumeroGiocatori
-                        value={selectedPlayers}
-                        onChange={setSelectedPlayers}
-                    />
+                    <NumeroGiocatori value={selectedPlayers} onChange={setSelectedPlayers} />
                 </div>
+
+                {error && <p style={{ color: "#c93e37", fontWeight: 700, fontSize: 14 }}>{error}</p>}
 
                 <button
                     type="button"
                     className="crea-partita-primary-button"
-                    aria-label={`Avvia partita con ${selectedPlayers} giocatori`}
-                    onClick={() => navigate("/attesa", { state: { mode: "create", players: selectedPlayers } })}
+                    disabled={loading}
+                    onClick={handleAvvia}
                 >
-                    AVVIA PARTITA
+                    {loading ? "..." : "AVVIA PARTITA"}
                 </button>
 
                 <button
                     type="button"
                     className="crea-partita-secondary-button"
-                    aria-label="Annulla"
                     onClick={() => navigate("/accesso")}
                 >
                     ANNULLA
                 </button>
             </section>
         </main>
-    )
+    );
 }

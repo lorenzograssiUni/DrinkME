@@ -1,27 +1,43 @@
-import { useId, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import "./Unisciti.css"
+import { useId, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./Unisciti.css";
+import { socket } from "../socket";
 
 export default function Unisciti() {
-    const inputId = useId()
-    const navigate = useNavigate()
-    const [code, setCode] = useState("")
+    const inputId = useId();
+    const navigate = useNavigate();
+    const [code, setCode] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const handleCodeChange = (event) => {
-        const sanitizedValue = event.target.value.replace(/\D/g, "").slice(0, 5)
-        setCode(sanitizedValue)
-    }
+    const handleCodeChange = (e) => {
+        const val = e.target.value.replace(/\D/g, "").slice(0, 5);
+        setCode(val);
+        setError("");
+    };
 
-    const handleSubmit = (event) => {
-        event.preventDefault()
-        if (code.length !== 5) return
-        navigate("/attesa", { state: { mode: "join", code } })
-    }
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (code.length !== 5) return;
+        setLoading(true);
+        setError("");
 
-    const handleCancel = () => {
-        setCode("")
-        navigate("/accesso")
-    }
+        if (!socket.connected) socket.connect();
+
+        socket.emit("join-room", { code }, (res) => {
+            setLoading(false);
+            if (!res.ok) { setError(res.error ?? "Errore"); return; }
+            navigate("/attesa", {
+                state: {
+                    mode: "join",
+                    roomCode: code,
+                    playerIndex: res.playerIndex,
+                    maxPlayers: res.maxPlayers,
+                    isHost: false,
+                },
+            });
+        });
+    };
 
     return (
         <main className="unisciti-page" aria-label="Unisciti alla stanza">
@@ -39,17 +55,13 @@ export default function Unisciti() {
 
                     <div className="unisciti-code-card">
                         <div className="unisciti-code-card-inner">
-                            <span className="unisciti-code-symbol" aria-hidden="true">
-                                #
-                            </span>
-
+                            <span className="unisciti-code-symbol" aria-hidden="true">#</span>
                             <input
                                 id={inputId}
                                 name="roomCode"
                                 type="text"
                                 inputMode="numeric"
                                 autoComplete="one-time-code"
-                                aria-label="Inserisci il codice della stanza"
                                 placeholder="00000"
                                 value={code}
                                 onChange={handleCodeChange}
@@ -59,19 +71,20 @@ export default function Unisciti() {
                         </div>
                     </div>
 
+                    {error && <p style={{ color: "#c93e37", fontWeight: 700, fontSize: 14 }}>{error}</p>}
+
                     <div className="unisciti-actions">
                         <button
                             type="submit"
                             className="unisciti-primary-button"
-                            disabled={code.length !== 5}
+                            disabled={code.length !== 5 || loading}
                         >
-                            UNISCITI
+                            {loading ? "..." : "UNISCITI"}
                         </button>
-
                         <button
                             type="button"
                             className="unisciti-secondary-button"
-                            onClick={handleCancel}
+                            onClick={() => { setCode(""); navigate("/accesso"); }}
                         >
                             ANNULLA
                         </button>
@@ -79,5 +92,5 @@ export default function Unisciti() {
                 </form>
             </section>
         </main>
-    )
+    );
 }
