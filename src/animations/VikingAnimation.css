@@ -1,0 +1,106 @@
+.viking-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    overflow: hidden;
+    background: #0a1628;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    animation: viking-fadein 0.3s ease;
+}
+
+.viking-wave {
+    position: absolute;
+    bottom: -10%;
+    left: -10%;
+    width: 120%;
+    height: 65%;
+    background: linear-gradient(180deg, #f5a623 0%, #c47a00 100%);
+    border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+    animation: wave-rise 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards, wave-sway 2s ease-in-out 1.2s infinite alternate;
+}
+
+.viking-ship {
+    position: relative;
+    z-index: 2;
+    font-size: 5rem;
+    animation: appear 0.5s ease 1s both, bob 1.5s ease-in-out 1.5s infinite alternate;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+}
+
+.viking-titolo {
+    position: relative;
+    z-index: 2;
+    color: #fff;
+    font-size: clamp(1.4rem, 5vw, 2.4rem);
+    font-weight: 800;
+    text-align: center;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+    animation: appear 0.6s ease 1.5s both;
+    padding: 0 1.5rem;
+    margin-top: 1rem;
+}
+
+.viking-hint {
+    position: relative;
+    z-index: 2;
+    color: rgba(255,255,255,0.45);
+    font-size: 0.85rem;
+    margin-top: 2rem;
+    animation: appear 0.6s ease 2.5s both;
+}
+
+@keyframes viking-fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes wave-rise {
+    from {
+        transform: translateY(120%);
+    }
+
+    to {
+        transform: translateY(0%);
+    }
+}
+
+@keyframes wave-sway {
+    from {
+        border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+    }
+
+    to {
+        border-radius: 45% 55% 0 0 / 35% 25% 0 0;
+    }
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes bob {
+    from {
+        transform: translateY(0) rotate(-3deg);
+    }
+
+    to {
+        transform: translateY(-14px) rotate(3deg);
+    }
+}

@@ -31,6 +31,7 @@ const REGOLE = [
 export default function Gioco() {
     const navigate = useNavigate();
     const location = useLocation();
+
     const {
         roomCode,
         playerIndex,
@@ -39,14 +40,16 @@ export default function Gioco() {
         currentPlayerIndex: initCPI,
         deckCount: initDeckCount,
         maxPlayers,
+        currentCard: initialCurrentCard,
+        cardRevealed: initialCardRevealed,
     } = location.state ?? {};
 
     const [players, setPlayers] = useState(initialPlayers ?? []);
     const [isHost, setIsHost] = useState(initialIsHost ?? false);
     const [currentPlayerIndex, setCPI] = useState(initCPI ?? 0);
     const [deckCount, setDeckCount] = useState(initDeckCount ?? 52);
-    const [currentCard, setCurrentCard] = useState(null);
-    const [cardRevealed, setCardRevealed] = useState(false);
+    const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
+    const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
     const [giocatoriAperti, setGiocatori] = useState(false);
@@ -57,23 +60,20 @@ export default function Gioco() {
     const mazzoEsaurito = deckCount === 0 && !cardRevealed;
     const giocatoreAttivo = players[currentPlayerIndex];
     const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
-    const attivoIsHost = giocatoreAttivo?.isHost ?? false;
-    // Il nome da mostrare sul beer card è SEMPRE il TUO nome
-    const mioNome = players.find(p => p.index === playerIndex)?.name
-        || `Giocatore ${(playerIndex ?? 0) + 1}`;
 
-    // ── Socket listeners ──────────────────────────────────────────────────────
     useEffect(() => {
-        const onCardDrawn = ({ card, deckCount: dc }) => {
+        const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi }) => {
             setCurrentCard(card);
             setCardRevealed(true);
             setDeckCount(dc);
+            if (cpi !== undefined) setCPI(cpi);
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
             setCPI(cpi);
             setDeckCount(dc);
             setCardRevealed(false);
+            setCurrentCard(null);
         };
 
         const onDeckShuffled = ({ deckCount: dc }) => {
@@ -82,9 +82,9 @@ export default function Gioco() {
             setCardRevealed(false);
         };
 
-        const onPlayersUpdated = (p) => {
-            setPlayers(p);
-            const me = p.find((pl) => pl.index === playerIndex);
+        const onPlayersUpdated = (updatedPlayers) => {
+            setPlayers(updatedPlayers);
+            const me = updatedPlayers.find((pl) => pl.index === playerIndex);
             setIsHost(Boolean(me?.isHost));
         };
 
@@ -92,7 +92,6 @@ export default function Gioco() {
             setIsHost(playerIndex === hostPlayerIndex);
         };
 
-        // Tutti i giocatori tornano alla schermata d'attesa
         const onGameRestarted = ({ roomCode: rc, maxPlayers: mp, players: p }) => {
             const me = p.find((pl) => pl.index === playerIndex);
             navigate("/attesa", {
@@ -106,12 +105,47 @@ export default function Gioco() {
             });
         };
 
+        const onGameStateSync = ({
+            roomCode: rc,
+            playerIndex: pi,
+            maxPlayers: mp,
+            isHost: ih,
+            players: p,
+            currentPlayerIndex: cpi,
+            deckCount: dc,
+            currentCard: cc,
+            cardRevealed: cr,
+        }) => {
+            setPlayers(p);
+            setIsHost(ih);
+            setCPI(cpi);
+            setDeckCount(dc);
+            setCurrentCard(cc);
+            setCardRevealed(cr);
+
+            navigate("/gioco", {
+                replace: true,
+                state: {
+                    roomCode: rc,
+                    playerIndex: pi,
+                    maxPlayers: mp,
+                    isHost: ih,
+                    players: p,
+                    currentPlayerIndex: cpi,
+                    deckCount: dc,
+                    currentCard: cc,
+                    cardRevealed: cr,
+                },
+            });
+        };
+
         socket.on("card-drawn", onCardDrawn);
         socket.on("turn-changed", onTurnChanged);
         socket.on("deck-shuffled", onDeckShuffled);
         socket.on("players-updated", onPlayersUpdated);
         socket.on("host-changed", onHostChanged);
         socket.on("game-restarted", onGameRestarted);
+        socket.on("game-state-sync", onGameStateSync);
 
         return () => {
             socket.off("card-drawn", onCardDrawn);
@@ -120,30 +154,40 @@ export default function Gioco() {
             socket.off("players-updated", onPlayersUpdated);
             socket.off("host-changed", onHostChanged);
             socket.off("game-restarted", onGameRestarted);
+            socket.off("game-state-sync", onGameStateSync);
         };
     }, [navigate, playerIndex, maxPlayers]);
 
-    // ── Chiudi menu click fuori ───────────────────────────────────────────────
     useEffect(() => {
         function handleOutside(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) setMenuAperto(false);
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setMenuAperto(false);
+            }
         }
+
         if (menuAperto) document.addEventListener("mousedown", handleOutside);
         return () => document.removeEventListener("mousedown", handleOutside);
     }, [menuAperto]);
 
-    // ── Escape chiude popup ───────────────────────────────────────────────────
     useEffect(() => {
         function handleKey(e) {
-            if (e.key === "Escape") { setAiuto(false); setGiocatori(false); }
+            if (e.key === "Escape") {
+                setAiuto(false);
+                setGiocatori(false);
+                setMenuAperto(false);
+            }
         }
-        if (aiutoAperto || giocatoriAperti) document.addEventListener("keydown", handleKey);
-        return () => document.removeEventListener("keydown", handleKey);
-    }, [aiutoAperto, giocatoriAperti]);
 
-    // ── Azioni carta ──────────────────────────────────────────────────────────
+        if (aiutoAperto || giocatoriAperti || menuAperto) {
+            document.addEventListener("keydown", handleKey);
+        }
+
+        return () => document.removeEventListener("keydown", handleKey);
+    }, [aiutoAperto, giocatoriAperti, menuAperto]);
+
     const handleClick = () => {
         if (!isMyTurn) return;
+
         if (!cardRevealed) {
             if (deckCount === 0) return;
             socket.emit("draw-card");
@@ -152,13 +196,11 @@ export default function Gioco() {
         }
     };
 
-    // Solo l'host può rimescolare
     const handleRimescola = () => {
         if (!isHost) return;
         socket.emit("shuffle-deck");
     };
 
-    // Solo l'host può ricominciare — emette evento al server
     const handleRicomincia = () => {
         if (!isHost) return;
         setMenuAperto(false);
@@ -174,8 +216,6 @@ export default function Gioco() {
     return (
         <main className="gioco-page" aria-label="Schermata di gioco">
             <section className="gioco-screen">
-
-                {/* ── TOP NAV ── */}
                 <nav className="gioco-nav">
                     <button
                         className="gioco-nav-btn gioco-nav-giocatori"
@@ -193,10 +233,11 @@ export default function Gioco() {
                         >
                             <img src={aiutoSvg} alt="" />
                         </button>
+
                         <button
                             className="gioco-nav-icon-btn"
                             aria-expanded={menuAperto}
-                            onClick={() => setMenuAperto(v => !v)}
+                            onClick={() => setMenuAperto((v) => !v)}
                             aria-label="Menu"
                         >
                             <img src={menuSvg} alt="" />
@@ -204,7 +245,12 @@ export default function Gioco() {
 
                         {menuAperto && (
                             <div className="gioco-dropdown" role="menu">
-                                {/* Ricomincia visibile SOLO all'host */}
+                                <div className="gioco-dropdown-code">
+                                    Codice stanza: {roomCode}
+                                </div>
+
+                                <div className="gioco-dropdown-divider" />
+
                                 {isHost && (
                                     <>
                                         <button
@@ -214,9 +260,11 @@ export default function Gioco() {
                                         >
                                             🔄 Ricomincia partita
                                         </button>
+
                                         <div className="gioco-dropdown-divider" />
                                     </>
                                 )}
+
                                 <button
                                     className="gioco-dropdown-item gioco-dropdown-item--danger"
                                     role="menuitem"
@@ -229,18 +277,9 @@ export default function Gioco() {
                     </div>
                 </nav>
 
-                {/* ── CARD SECTION ── */}
                 <div className="gioco-card-section">
                     <div className="gioco-cards-badge" aria-live="polite">
                         Carte: {deckCount}
-                    </div>
-
-                    {/* Turno attuale — visibile a tutti */}
-                    <div className="gioco-turno-label" aria-live="polite">
-                        {isMyTurn
-                            ? "🎯 È il tuo turno!"
-                            : `Turno di: ${nomeAttivo}${attivoIsHost ? " 👑" : ""}`
-                        }
                     </div>
 
                     <div className="gioco-card-wrapper">
@@ -250,19 +289,24 @@ export default function Gioco() {
                             disabled={mazzoEsaurito || !isMyTurn}
                             aria-label={
                                 isMyTurn
-                                    ? cardRevealed ? "Ricopri" : "Scopri"
+                                    ? cardRevealed
+                                        ? "Ricopri"
+                                        : "Scopri"
                                     : "Non è il tuo turno"
                             }
                             style={{ opacity: isMyTurn ? 1 : 0.6 }}
                         >
                             <img
                                 src={cardRevealed && currentCard ? cartaPath(currentCard) : backPng}
-                                alt={cardRevealed && currentCard ? `Carta ${currentCard}` : "Carta coperta"}
+                                alt={
+                                    cardRevealed && currentCard
+                                        ? `Carta ${currentCard}`
+                                        : "Carta coperta"
+                                }
                                 className="gioco-carta-img"
                             />
                         </button>
 
-                        {/* Rimescola: overlay solo per l'HOST */}
                         {mazzoEsaurito && isHost && (
                             <div className="gioco-mazzo-esaurito">
                                 <button
@@ -274,7 +318,6 @@ export default function Gioco() {
                             </div>
                         )}
 
-                        {/* Messaggio per i non-host quando il mazzo è esaurito */}
                         {mazzoEsaurito && !isHost && (
                             <div className="gioco-mazzo-esaurito">
                                 <p className="gioco-attendi-rimescola">
@@ -285,85 +328,91 @@ export default function Gioco() {
                     </div>
                 </div>
 
-                {/* ── PLAYER CARD — mostra sempre IL TUO nome ── */}
                 <div className="gioco-player-card">
+                    <div className="gioco-player-turno">Turno di</div>
+
                     <img
                         src={beerPng}
                         alt="Card giocatore"
                         className="gioco-beer-img"
                         draggable="false"
                     />
+
                     <span className="gioco-player-name">
-                        {mioNome.toUpperCase()}
+                        {nomeAttivo.toUpperCase()}
                     </span>
                 </div>
-
             </section>
 
-            {/* ── POPUP AIUTO ── */}
-            {aiutoAperto && createPortal(
-                <div
-                    className="aiuto-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    onClick={() => setAiuto(false)}
-                >
-                    <div className="aiuto-popup" onClick={e => e.stopPropagation()}>
-                        <div className="aiuto-header">
-                            <span className="aiuto-title">📖 REGOLE</span>
-                            <button className="aiuto-close" onClick={() => setAiuto(false)}>✕</button>
-                        </div>
-                        <ol className="aiuto-list">
-                            {REGOLE.map(({ carta, testo }) => (
-                                <li key={carta} className="aiuto-item">
-                                    <span className="aiuto-carta">{carta}</span>
-                                    <span className="aiuto-testo">{testo}</span>
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
-                </div>,
-                document.body
-            )}
+            {aiutoAperto &&
+                createPortal(
+                    <div
+                        className="aiuto-overlay"
+                        role="dialog"
+                        aria-modal="true"
+                        onClick={() => setAiuto(false)}
+                    >
+                        <div className="aiuto-popup" onClick={(e) => e.stopPropagation()}>
+                            <div className="aiuto-header">
+                                <span className="aiuto-title">📖 REGOLE</span>
+                                <button className="aiuto-close" onClick={() => setAiuto(false)}>
+                                    ✕
+                                </button>
+                            </div>
 
-            {/* ── POPUP GIOCATORI ── */}
-            {giocatoriAperti && createPortal(
-                <div
-                    className="aiuto-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    onClick={() => setGiocatori(false)}
-                >
-                    <div className="aiuto-popup" onClick={e => e.stopPropagation()}>
-                        <div className="aiuto-header">
-                            <span className="aiuto-title">👥 GIOCATORI</span>
-                            <button className="aiuto-close" onClick={() => setGiocatori(false)}>✕</button>
+                            <ol className="aiuto-list">
+                                {REGOLE.map(({ carta, testo }) => (
+                                    <li key={carta} className="aiuto-item">
+                                        <span className="aiuto-carta">{carta}</span>
+                                        <span className="aiuto-testo">{testo}</span>
+                                    </li>
+                                ))}
+                            </ol>
                         </div>
-                        <ol className="aiuto-list">
-                            {players.map((p) => (
-                                <li
-                                    key={p.index}
-                                    className={[
-                                        "aiuto-item",
-                                        p.index === currentPlayerIndex ? "aiuto-item--attivo" : "",
-                                        p.connected === false ? "aiuto-item--disconnesso" : "",
-                                    ].join(" ").trim()}
-                                >
-                                    <span className="aiuto-carta">{p.index + 1}</span>
-                                    <span className="aiuto-testo">
-                                        {p.name || `Giocatore ${p.index + 1}`}
-                                        {p.isHost ? " 👑" : ""}
-                                        {p.index === playerIndex ? " (tu)" : ""}
-                                        {p.connected === false ? " — disconnesso" : ""}
-                                    </span>
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
-                </div>,
-                document.body
-            )}
+                    </div>,
+                    document.body
+                )}
 
+            {giocatoriAperti &&
+                createPortal(
+                    <div
+                        className="aiuto-overlay"
+                        role="dialog"
+                        aria-modal="true"
+                        onClick={() => setGiocatori(false)}
+                    >
+                        <div className="aiuto-popup" onClick={(e) => e.stopPropagation()}>
+                            <div className="aiuto-header">
+                                <span className="aiuto-title">👥 GIOCATORI</span>
+                                <button className="aiuto-close" onClick={() => setGiocatori(false)}>
+                                    ✕
+                                </button>
+                            </div>
+
+                            <ol className="aiuto-list">
+                                {players.map((p) => (
+                                    <li
+                                        key={p.index}
+                                        className={[
+                                            "aiuto-item",
+                                            p.index === currentPlayerIndex ? "aiuto-item--attivo" : "",
+                                            p.connected === false ? "aiuto-item--disconnesso" : "",
+                                        ].join(" ").trim()}
+                                    >
+                                        <span className="aiuto-carta">{p.index + 1}</span>
+                                        <span className="aiuto-testo">
+                                            {p.name || `Giocatore ${p.index + 1}`}
+                                            {p.isHost ? " 👑" : ""}
+                                            {p.index === playerIndex ? " (tu)" : ""}
+                                            {p.connected === false ? " — disconnesso" : ""}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    </div>,
+                    document.body
+                )}
         </main>
     );
 }

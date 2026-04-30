@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Unisciti.css";
 import { socket } from "../socket";
@@ -9,6 +9,43 @@ export default function Unisciti() {
     const [code, setCode] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    // Rejoin: se il server risponde con game-state-sync,
+    // significa che il giocatore stava già giocando → vai direttamente a /gioco
+    useEffect(() => {
+        const onGameStateSync = ({
+            roomCode,
+            playerIndex,
+            maxPlayers,
+            isHost,
+            players,
+            currentPlayerIndex,
+            deckCount,
+            currentCard,
+            cardRevealed,
+        }) => {
+            navigate("/gioco", {
+                replace: true,
+                state: {
+                    roomCode,
+                    playerIndex,
+                    maxPlayers,
+                    isHost,
+                    players,
+                    currentPlayerIndex,
+                    deckCount,
+                    currentCard,
+                    cardRevealed,
+                },
+            });
+        };
+
+        socket.on("game-state-sync", onGameStateSync);
+
+        return () => {
+            socket.off("game-state-sync", onGameStateSync);
+        };
+    }, [navigate]);
 
     const handleCodeChange = (e) => {
         const val = e.target.value.replace(/\D/g, "").slice(0, 5);
@@ -27,6 +64,10 @@ export default function Unisciti() {
         socket.emit("join-room", { code }, (res) => {
             setLoading(false);
             if (!res.ok) { setError(res.error ?? "Errore"); return; }
+
+            // Rejoin in partita già avviata: aspetta game-state-sync dal server
+            if (res.rejoined && res.inGame) return;
+
             navigate("/attesa", {
                 state: {
                     mode: "join",

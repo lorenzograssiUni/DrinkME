@@ -12,6 +12,7 @@ const PLACEHOLDER = "INSERISCI NOME";
 export default function TavoloAttesa() {
     const navigate = useNavigate();
     const location = useLocation();
+
     const {
         roomCode,
         playerIndex,
@@ -25,7 +26,6 @@ export default function TavoloAttesa() {
     const [editingVal, setEditingVal] = useState("");
     const inputRef = useRef(null);
 
-    // ── Socket listeners ──────────────────────────────────────────────────────
     useEffect(() => {
         const onPlayersUpdated = (updatedPlayers) => {
             setPlayers(updatedPlayers);
@@ -37,9 +37,11 @@ export default function TavoloAttesa() {
             setIsHost(playerIndex === hostPlayerIndex);
         };
 
-        const onGameStarted = ({ players: p, currentPlayerIndex, deck }) => {
+        const onGameStarted = ({ players: p, currentPlayerIndex, deck, hostSocketId }) => {
             const me = p.find((pl) => pl.index === playerIndex);
+
             navigate("/gioco", {
+                replace: true,
                 state: {
                     roomCode,
                     playerIndex,
@@ -48,6 +50,9 @@ export default function TavoloAttesa() {
                     players: p,
                     currentPlayerIndex,
                     deckCount: deck.length,
+                    currentCard: null,
+                    cardRevealed: false,
+                    hostSocketId,
                 },
             });
         };
@@ -71,7 +76,6 @@ export default function TavoloAttesa() {
         };
     }, [navigate, roomCode, playerIndex, maxPlayers]);
 
-    // ── Autofocus input ───────────────────────────────────────────────────────
     useEffect(() => {
         if (editingId !== null && inputRef.current) {
             inputRef.current.focus();
@@ -79,9 +83,9 @@ export default function TavoloAttesa() {
         }
     }, [editingId]);
 
-    // ── Handlers ──────────────────────────────────────────────────────────────
     const toggleAvatar = (player) => {
         if (player.index !== playerIndex) return;
+
         socket.emit("update-player", {
             gender: player.gender === "female" ? "male" : "female",
         });
@@ -94,38 +98,45 @@ export default function TavoloAttesa() {
     };
 
     const commitEdit = () => {
-        socket.emit("update-player", { name: editingVal.trim().toUpperCase() });
+        socket.emit("update-player", {
+            name: editingVal.trim().toUpperCase(),
+        });
         setEditingId(null);
         setEditingVal("");
     };
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") commitEdit();
-        if (e.key === "Escape") { setEditingId(null); setEditingVal(""); }
+        if (e.key === "Escape") {
+            setEditingId(null);
+            setEditingVal("");
+        }
     };
 
-    const handleIniziaGioco = () => socket.emit("start-game");
+    const handleIniziaGioco = () => {
+        socket.emit("start-game");
+    };
 
-    // ── ANNULLA → sempre home ─────────────────────────────────────────────────
     const handleAnnulla = () => {
         socket.disconnect();
         navigate("/accesso", { replace: true });
     };
 
-    // ── Lista progressiva ─────────────────────────────────────────────────────
     const nextIndex = players.length;
     const isFull = nextIndex >= (maxPlayers ?? 6);
 
     const slotList = [
         ...players,
         ...(!isFull
-            ? [{
-                index: nextIndex,
-                name: "",
-                gender: nextIndex % 2 === 0 ? "female" : "male",
-                connected: false,
-                empty: true,
-            }]
+            ? [
+                {
+                    index: nextIndex,
+                    name: "",
+                    gender: nextIndex % 2 === 0 ? "female" : "male",
+                    connected: false,
+                    empty: true,
+                },
+            ]
             : []),
     ];
 
@@ -135,10 +146,8 @@ export default function TavoloAttesa() {
     return (
         <main className="attesa-page" aria-label="Tavolo di attesa">
             <section className="attesa-screen">
-
                 <div className="attesa-panel">
                     <div className="attesa-panel-inner">
-
                         <div className="attesa-code">
                             <span>Code: {roomCode ?? "—"}</span>
                         </div>
@@ -180,9 +189,7 @@ export default function TavoloAttesa() {
                                         <div className="attesa-player-info">
                                             <span className="attesa-player-label">
                                                 Giocatore {player.index + 1}
-                                                {isCreatore && (
-                                                    <span className="attesa-host-badge">HOST</span>
-                                                )}
+                                                {isCreatore && <span className="attesa-host-badge">HOST</span>}
                                                 {!isEmpty && !player.connected && " — disconnesso"}
                                             </span>
 
@@ -220,7 +227,6 @@ export default function TavoloAttesa() {
                                 );
                             })}
                         </ol>
-
                     </div>
                 </div>
 
@@ -249,7 +255,6 @@ export default function TavoloAttesa() {
                         ANNULLA
                     </button>
                 </div>
-
             </section>
         </main>
     );
