@@ -126,6 +126,16 @@
     flex-shrink: 0;
 }
 
+/* Slot vuoto — opacità ridotta */
+.attesa-player--empty {
+    opacity: 0.5;
+}
+
+/* Giocatore disconnesso */
+.attesa-player--disconnected {
+    opacity: 0.45;
+}
+
 /* Pulsante avatar */
 .attesa-avatar-btn {
     background: none;
@@ -169,6 +179,24 @@
     color: #7e7618;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Badge HOST */
+.attesa-host-badge {
+    display: inline-block;
+    font-size: 0.65em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background-color: #e2b04e;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    vertical-align: middle;
+    line-height: 1.4;
 }
 
 .attesa-player-name {
@@ -192,6 +220,11 @@
         border-bottom-color: #4e4912;
     }
 
+.attesa-player-name--placeholder {
+    opacity: 0.5;
+    font-style: italic;
+}
+
 .attesa-player-name-input {
     font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
     font-size: 20px;
@@ -211,6 +244,16 @@
     line-height: 1.1;
     -webkit-appearance: none;
     appearance: none;
+}
+
+/* Messaggio attesa guest */
+.attesa-waiting-msg {
+    font-family: "PaulGrotesk", Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    text-align: center;
 }
 
 /* Pulsanti INIZIA / ANNULLA */
