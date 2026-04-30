@@ -7,7 +7,6 @@ import menuSvg from "../assets/icons/menu.svg";
 import backPng from "../assets/images/cards/back.png";
 import beerPng from "../assets/images/beer.png";
 
-// Genera il mazzo completo: 52 carte
 const SEMI = ["F", "P", "C", "Q"];
 const VALORI = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
@@ -15,7 +14,6 @@ function creaMazzo() {
     return SEMI.flatMap((seme) => VALORI.map((valore) => `${valore}-${seme}`));
 }
 
-// Import dinamico: restituisce il path della carta
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
 }
@@ -23,18 +21,16 @@ function cartaPath(nome) {
 export default function Gioco() {
     const navigate = useNavigate();
     const location = useLocation();
-    // Il nome del giocatore corrente arriva dallo state di navigate, default "Giocatore"
     const giocatore = location.state?.playerName ?? "Giocatore";
 
     const [mazzo, setMazzo] = useState(creaMazzo());
-    const [cartaVisibile, setCarta] = useState(null);   // null = coperta
-    const [scoperta, setScoperta] = useState(false);  // true = mostra fronte
+    const [cartaVisibile, setCarta] = useState(null);
+    const [scoperta, setScoperta] = useState(false);
 
     const carteRimaste = mazzo.length;
 
     const handleClick = useCallback(() => {
         if (!scoperta) {
-            // Carta coperta → scopri una carta casuale dal mazzo
             if (mazzo.length === 0) return;
             const idx = Math.floor(Math.random() * mazzo.length);
             const scelta = mazzo[idx];
@@ -42,7 +38,6 @@ export default function Gioco() {
             setCarta(scelta);
             setScoperta(true);
         } else {
-            // Carta scoperta → ricopri
             setScoperta(false);
         }
     }, [scoperta, mazzo]);
@@ -70,12 +65,10 @@ export default function Gioco() {
 
                 {/* ── CARD SECTION ── */}
                 <div className="gioco-card-section">
-                    {/* Badge carte rimaste */}
                     <div className="gioco-cards-badge" aria-live="polite">
                         Cards: {carteRimaste}
                     </div>
 
-                    {/* Carta cliccabile */}
                     <button
                         className={`gioco-carta-btn ${scoperta ? "scoperta" : ""}`}
                         onClick={handleClick}

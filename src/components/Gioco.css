@@ -70,7 +70,6 @@
 .gioco-nav-right {
     display: flex;
     align-items: center;
-    gap: 0;
     background: #4e4912;
     border-radius: 10px;
     overflow: hidden;
@@ -89,7 +88,7 @@
 }
 
     .gioco-nav-icon-btn:active {
-        background: rgba(255,255,255,0.15);
+        background: rgba(255, 255, 255, 0.15);
     }
 
     .gioco-nav-icon-btn img {
@@ -131,15 +130,15 @@
     padding: 0;
     cursor: pointer;
     border-radius: 12px;
-    box-shadow: 10px 10px 8px 0 rgba(0, 0, 0, 0.65);
-    transition: transform 160ms ease, box-shadow 160ms ease;
+    filter: drop-shadow(8px 8px 6px rgba(0, 0, 0, 0.75));
+    transition: filter 160ms ease, transform 160ms ease;
     display: block;
     overflow: hidden;
 }
 
     .gioco-carta-btn:active {
         transform: scale(0.97);
-        box-shadow: 6px 6px 6px 0 rgba(0, 0, 0, 0.5);
+        filter: drop-shadow(4px 4px 4px rgba(0, 0, 0, 0.5));
     }
 
     .gioco-carta-btn:focus-visible {
@@ -152,7 +151,7 @@
         cursor: not-allowed;
     }
 
-    /* Flip visivo quando si scopre */
+    /* Animazione flip */
     .gioco-carta-btn.scoperta .gioco-carta-img {
         animation: flipIn 300ms ease forwards;
     }
@@ -183,39 +182,44 @@
     margin-top: auto;
     flex-shrink: 0;
     width: 270px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: 147px;
+    display: block;
 }
 
 .gioco-beer-img {
     width: 270px;
-    height: auto;
+    height: 147px;
+    object-fit: cover;
     display: block;
-    box-shadow: 10px 10px 4px 0 rgba(0, 0, 0, 0.75);
+    filter: drop-shadow(8px 8px 6px rgba(0, 0, 0, 0.75));
     user-select: none;
     pointer-events: none;
 }
 
-/* Nome giocatore sovrapposto alla beer card */
+/* Casella nome */
 .gioco-player-name {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 36px;
+    left: 56px;
+    width: 162px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
-    font-size: clamp(1rem, 4vw, 1.4rem);
+    font-size: clamp(0.85rem, 3vw, 1.1rem);
     font-weight: 900;
     color: #562f06;
     background: #fff2dd;
-    border: 2px solid #562f06;
-    border-radius: 6px;
-    padding: 4px 14px;
+    border-radius: 4px;
+    outline: 4px solid #475B5C;
+    outline-offset: 0px;
     white-space: nowrap;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     pointer-events: none;
     user-select: none;
+    box-sizing: border-box;
 }
 
 /* ── Responsive ── */
