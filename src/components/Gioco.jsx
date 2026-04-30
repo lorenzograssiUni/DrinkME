@@ -8,6 +8,7 @@ import menuSvg from "../assets/icons/menu.svg";
 import backPng from "../assets/images/cards/back.png";
 import beerPng from "../assets/images/beer.png";
 import { socket } from "../socket";
+import VikingAnimation from "../animations/VikingAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
@@ -53,6 +54,7 @@ export default function Gioco() {
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
     const [giocatoriAperti, setGiocatori] = useState(false);
+    const [vikingAttivo, setVikingAttivo] = useState(false);
 
     const menuRef = useRef(null);
 
@@ -67,6 +69,7 @@ export default function Gioco() {
             setCardRevealed(true);
             setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
+            if (card.split("-")[0] === "4") setVikingAttivo(true);
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
@@ -294,7 +297,7 @@ export default function Gioco() {
                                         : "Scopri"
                                     : "Non è il tuo turno"
                             }
-                            style={{ opacity: isMyTurn ? 1 : 0.6 }}
+                            style={{ opacity: !isMyTurn && !cardRevealed ? 0.6 : 1 }}
                         >
                             <img
                                 src={cardRevealed && currentCard ? cartaPath(currentCard) : backPng}
@@ -413,6 +416,14 @@ export default function Gioco() {
                     </div>,
                     document.body
                 )}
+
+            {vikingAttivo && (
+                <VikingAnimation
+                    giocatore={nomeAttivo}
+                    onClose={() => setVikingAttivo(false)}
+                />
+            )}
+
         </main>
     );
 }
