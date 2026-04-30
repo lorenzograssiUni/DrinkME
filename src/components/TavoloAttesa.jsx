@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./TavoloAttesa.css";
 import avatarFemale from "../assets/avatars/avatar-female.png";
-import avatarMale from "../assets/avatars/avatar-male.png";
-import frecceSvg from "../assets/icons/frecce.svg";
-import genderSvg from "../assets/icons/gender.svg";
-import { socket } from "../socket";
+import avatarMale   from "../assets/avatars/avatar-male.png";
+import frecceSvg    from "../assets/icons/frecce.svg";
+import genderSvg    from "../assets/icons/gender.svg";
+import { socket }   from "../socket";
 
 const PLACEHOLDER = "INSERISCI NOME";
 
@@ -14,12 +14,12 @@ export default function TavoloAttesa() {
     const location = useLocation();
     const { roomCode, playerIndex, maxPlayers, isHost, mode } = location.state ?? {};
 
-    const [players, setPlayers] = useState([]);
-    const [editingId, setEditingId] = useState(null);
+    const [players, setPlayers]       = useState([]);
+    const [editingId, setEditingId]   = useState(null);
     const [editingVal, setEditingVal] = useState("");
     const inputRef = useRef(null);
 
-    // ── Socket listeners ──────────────────────────────────────────────────────
+    // ── Socket listeners + richiesta lista al mount ───────────────────────────
     useEffect(() => {
         const onPlayersUpdated = (updatedPlayers) => setPlayers(updatedPlayers);
 
@@ -37,12 +37,16 @@ export default function TavoloAttesa() {
         };
 
         socket.on("players-updated", onPlayersUpdated);
-        socket.on("game-started", onGameStarted);
+        socket.on("game-started",    onGameStarted);
 
-        // Richiedi la lista corrente (host la ha già, guest la riceve via players-updated)
+        // Richiedi la lista corrente al server (gestisce anche refresh di pagina)
+        socket.emit("get-players", (current) => {
+            if (current) setPlayers(current);
+        });
+
         return () => {
             socket.off("players-updated", onPlayersUpdated);
-            socket.off("game-started", onGameStarted);
+            socket.off("game-started",    onGameStarted);
         };
     }, [navigate, roomCode, playerIndex, isHost]);
 
@@ -56,42 +60,47 @@ export default function TavoloAttesa() {
 
     // ── Handlers ──────────────────────────────────────────────────────────────
     const toggleAvatar = (player) => {
-        if (player.index !== playerIndex) return; // solo il tuo avatar
-        const newGender = player.gender === "female" ? "male" : "female";
-        socket.emit("update-player", { gender: newGender });
+        if (player.index !== playerIndex) return;
+        socket.emit("update-player", { gender: player.gender === "female" ? "male" : "female" });
     };
 
     const startEdit = (player) => {
-        if (player.index !== playerIndex) return; // solo il tuo nome
+        if (player.index !== playerIndex) return;
         setEditingId(player.index);
         setEditingVal(player.name);
     };
 
     const commitEdit = () => {
-        const trimmed = editingVal.trim().toUpperCase();
-        socket.emit("update-player", { name: trimmed });
+        socket.emit("update-player", { name: editingVal.trim().toUpperCase() });
         setEditingId(null);
         setEditingVal("");
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === "Enter") commitEdit();
+        if (e.key === "Enter")  commitEdit();
         if (e.key === "Escape") { setEditingId(null); setEditingVal(""); }
     };
 
-    const handleIniziaGioco = () => {
-        socket.emit("start-game");
-    };
+    const handleIniziaGioco = () => socket.emit("start-game");
 
     const handleAnnulla = () => {
         socket.disconnect();
         navigate(mode === "join" ? "/unisciti" : "/crea-partita");
     };
 
-    // ── Slot vuoti (giocatori non ancora connessi) ────────────────────────────
-    const slotList = Array.from({ length: maxPlayers ?? 6 }, (_, i) => {
-        return players.find(p => p.index === i) ?? { index: i, name: "", gender: i % 2 === 0 ? "female" : "male", connected: false, empty: true };
-    });
+    // ── Lista progressiva: giocatori entrati + 1 slot "In attesa" ─────────────
+    const nextIndex = players.length;
+    const isFull    = nextIndex >= (maxPlayers ?? 6);
+    const slotList  = [
+        ...players,
+        ...(!isFull ? [{
+            index:     nextIndex,
+            name:      "",
+            gender:    nextIndex % 2 === 0 ? "female" : "male",
+            connected: false,
+            empty:     true,
+        }] : []),
+    ];
 
     const connectedCount = players.filter(p => p.connected).length;
     const canStart = isHost && connectedCount >= 2;
@@ -114,13 +123,18 @@ export default function TavoloAttesa() {
 
                         <ol className="attesa-list" aria-label="Giocatori in attesa">
                             {slotList.map((player) => {
-                                const isMine = player.index === playerIndex;
-                                const isEmpty = player.empty;
+                                const isMine     = player.index === playerIndex;
+                                const isEmpty    = player.empty;
+                                const isCreatore = player.index === 0 && !isEmpty;
 
                                 return (
                                     <li
                                         key={player.index}
-                                        className={`attesa-player ${isEmpty ? "attesa-player--empty" : ""} ${!player.connected && !isEmpty ? "attesa-player--disconnected" : ""}`}
+                                        className={[
+                                            "attesa-player",
+                                            isEmpty            ? "attesa-player--empty"        : "",
+                                            !player.connected && !isEmpty ? "attesa-player--disconnected" : "",
+                                        ].join(" ").trim()}
                                     >
                                         <button
                                             className="attesa-avatar-btn"
@@ -139,6 +153,9 @@ export default function TavoloAttesa() {
                                         <div className="attesa-player-info">
                                             <span className="attesa-player-label">
                                                 Giocatore {player.index + 1}
+                                                {isCreatore && (
+                                                    <span className="attesa-host-badge">HOST</span>
+                                                )}
                                                 {!isEmpty && !player.connected && " — disconnesso"}
                                             </span>
 
@@ -158,7 +175,11 @@ export default function TavoloAttesa() {
                                                 />
                                             ) : (
                                                 <span
-                                                    className={`attesa-player-name ${isMine ? "attesa-player-name--editable" : ""} ${!player.name ? "attesa-player-name--placeholder" : ""}`}
+                                                    className={[
+                                                        "attesa-player-name",
+                                                        isMine    ? "attesa-player-name--editable"    : "",
+                                                        !player.name ? "attesa-player-name--placeholder" : "",
+                                                    ].join(" ").trim()}
                                                     onClick={() => startEdit(player)}
                                                     role={isMine ? "button" : undefined}
                                                     tabIndex={isMine ? 0 : undefined}

@@ -64,16 +64,18 @@ io.on("connection", (socket) => {
         };
         rooms.set(code, room);
         socket.join(code);
-        socket.data.roomCode = code;
+        socket.data.roomCode   = code;
         socket.data.playerIndex = 0;
+        // Notifica subito l'host con la lista iniziale
+        socket.emit("players-updated", room.players);
         cb({ ok: true, code, playerIndex: 0, maxPlayers: numPlayers });
     });
 
     // ── Unisciti alla stanza ──
     socket.on("join-room", ({ code }, cb) => {
         const room = rooms.get(code);
-        if (!room)                                return cb({ ok: false, error: "Stanza non trovata" });
-        if (room.status !== "waiting")            return cb({ ok: false, error: "Partita già iniziata" });
+        if (!room)                                  return cb({ ok: false, error: "Stanza non trovata" });
+        if (room.status !== "waiting")              return cb({ ok: false, error: "Partita già iniziata" });
         if (room.players.length >= room.maxPlayers) return cb({ ok: false, error: "Stanza piena" });
 
         const index = room.players.length;
@@ -85,10 +87,16 @@ io.on("connection", (socket) => {
             connected: true,
         });
         socket.join(code);
-        socket.data.roomCode = code;
+        socket.data.roomCode   = code;
         socket.data.playerIndex = index;
         io.to(code).emit("players-updated", room.players);
         cb({ ok: true, playerIndex: index, maxPlayers: room.maxPlayers });
+    });
+
+    // ── Lista giocatori corrente (per mount/refresh) ──
+    socket.on("get-players", (cb) => {
+        const room = rooms.get(socket.data.roomCode);
+        if (cb) cb(room ? room.players : null);
     });
 
     // ── Aggiorna nome/genere ──
