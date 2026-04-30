@@ -31,7 +31,6 @@ export default function Gioco() {
     const menuRef = useRef(null);
     const carteRimaste = mazzo.length;
 
-    // Chiudi il menu cliccando fuori
     useEffect(() => {
         function handleOutside(e) {
             if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -56,10 +55,8 @@ export default function Gioco() {
     }, [scoperta, mazzo]);
 
     const handleRicomincia = () => {
-        setMazzo(creaMazzo());
-        setCarta(null);
-        setScoperta(false);
         setMenuAperto(false);
+        navigate("/attesa");
     };
 
     const handleEsci = () => {
@@ -96,7 +93,6 @@ export default function Gioco() {
                             <img src={menuSvg} alt="" />
                         </button>
 
-                        {/* ── DROPDOWN MENU ── */}
                         {menuAperto && (
                             <div className="gioco-dropdown" role="menu">
                                 <button

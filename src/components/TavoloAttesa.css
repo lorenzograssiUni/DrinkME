@@ -24,22 +24,32 @@
     box-sizing: border-box;
 }
 
-/* Card principale beige con bordo tratteggiato */
+/* Card esterna — bordo solido */
 .attesa-panel {
     position: absolute;
     top: 195px;
     left: 50%;
     transform: translateX(-50%);
-    width: 252px;
-    background: rgba(237, 214, 170, 0.92);
-    border: 2px dashed #7e7618;
+    width: 272px;
+    background: #edd6aa;
+    border: 2px solid #4e4912;
+    border-radius: 18px;
+    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+/* Inner con bordo tratteggiato */
+.attesa-panel-inner {
+    width: 100%;
+    border: 2px dashed #7e7518;
     border-radius: 14px;
-    padding: 10px 10px 12px;
+    padding: 12px 10px 14px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 /* Badge codice verde */
@@ -48,6 +58,7 @@
     border-radius: 999px;
     padding: 5px 18px;
     align-self: center;
+    flex-shrink: 0;
 }
 
     .attesa-code span {
@@ -70,6 +81,7 @@
     align-items: center;
     gap: 8px;
     align-self: flex-start;
+    flex-shrink: 0;
 }
 
 .attesa-icon {
@@ -81,14 +93,14 @@
 /* Lista giocatori scrollabile */
 .attesa-list {
     width: 100%;
-    max-height: 280px;
+    max-height: 260px;
     overflow-y: auto;
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     scrollbar-width: thin;
     scrollbar-color: #7e7618 transparent;
 }
@@ -171,7 +183,7 @@
 /* Pulsanti INIZIA / ANNULLA */
 .attesa-actions {
     position: absolute;
-    bottom: 55px;
+    bottom: 130px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
