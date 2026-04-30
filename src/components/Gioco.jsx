@@ -55,6 +55,8 @@ export default function Gioco() {
     const [aiutoAperto, setAiuto] = useState(false);
     const [giocatoriAperti, setGiocatori] = useState(false);
     const [vikingAttivo, setVikingAttivo] = useState(false);
+    const [vikingPlayerIndex, setVikingPlayerIndex] = useState(null);
+    const [vikingPlayerName, setVikingPlayerName] = useState("");
 
     const menuRef = useRef(null);
 
@@ -69,7 +71,14 @@ export default function Gioco() {
             setCardRevealed(true);
             setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
-            if (card.split("-")[0] === "4") setVikingAttivo(true);
+            if (card.split("-")[0] === "4") {
+                const idx = cpi ?? currentPlayerIndex;
+                const chi = players.find((p) => p.index === idx);
+                const nome = chi?.name || `Giocatore ${idx + 1}`;
+                setVikingPlayerIndex(idx);
+                setVikingPlayerName(nome);
+                setVikingAttivo(true);
+            }
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
@@ -159,7 +168,7 @@ export default function Gioco() {
             socket.off("game-restarted", onGameRestarted);
             socket.off("game-state-sync", onGameStateSync);
         };
-    }, [navigate, playerIndex, maxPlayers]);
+    }, [navigate, playerIndex, maxPlayers, players, currentPlayerIndex]);
 
     useEffect(() => {
         function handleOutside(e) {
@@ -345,6 +354,14 @@ export default function Gioco() {
                         {nomeAttivo.toUpperCase()}
                     </span>
                 </div>
+
+                {vikingAttivo && (
+                    <VikingAnimation
+                        giocatore={vikingPlayerName}
+                        onClose={() => setVikingAttivo(false)}
+                    />
+                )}
+
             </section>
 
             {aiutoAperto &&
@@ -405,6 +422,7 @@ export default function Gioco() {
                                         <span className="aiuto-carta">{p.index + 1}</span>
                                         <span className="aiuto-testo">
                                             {p.name || `Giocatore ${p.index + 1}`}
+                                            {p.index === vikingPlayerIndex ? " ⚔️" : ""}
                                             {p.isHost ? " 👑" : ""}
                                             {p.index === playerIndex ? " (tu)" : ""}
                                             {p.connected === false ? " — disconnesso" : ""}
@@ -416,14 +434,6 @@ export default function Gioco() {
                     </div>,
                     document.body
                 )}
-
-            {vikingAttivo && (
-                <VikingAnimation
-                    giocatore={nomeAttivo}
-                    onClose={() => setVikingAttivo(false)}
-                />
-            )}
-
         </main>
     );
 }
