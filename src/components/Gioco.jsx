@@ -31,9 +31,18 @@ const REGOLE = [
 export default function Gioco() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { roomCode, playerIndex, isHost, players: initialPlayers, currentPlayerIndex: initCPI, deckCount: initDeckCount } = location.state ?? {};
+    const {
+        roomCode,
+        playerIndex,
+        isHost: initialIsHost,
+        players: initialPlayers,
+        currentPlayerIndex: initCPI,
+        deckCount: initDeckCount,
+        maxPlayers,
+    } = location.state ?? {};
 
     const [players, setPlayers] = useState(initialPlayers ?? []);
+    const [isHost, setIsHost] = useState(initialIsHost ?? false);
     const [currentPlayerIndex, setCPI] = useState(initCPI ?? 0);
     const [deckCount, setDeckCount] = useState(initDeckCount ?? 52);
     const [currentCard, setCurrentCard] = useState(null);
@@ -46,7 +55,12 @@ export default function Gioco() {
 
     const isMyTurn = playerIndex === currentPlayerIndex;
     const mazzoEsaurito = deckCount === 0 && !cardRevealed;
-    const giocatoreCorrente = players[currentPlayerIndex]?.name || `Giocatore ${currentPlayerIndex + 1}`;
+    const giocatoreAttivo = players[currentPlayerIndex];
+    const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
+    const attivoIsHost = giocatoreAttivo?.isHost ?? false;
+    // Il nome da mostrare sul beer card è SEMPRE il TUO nome
+    const mioNome = players.find(p => p.index === playerIndex)?.name
+        || `Giocatore ${(playerIndex ?? 0) + 1}`;
 
     // ── Socket listeners ──────────────────────────────────────────────────────
     useEffect(() => {
@@ -55,30 +69,59 @@ export default function Gioco() {
             setCardRevealed(true);
             setDeckCount(dc);
         };
+
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
             setCPI(cpi);
             setDeckCount(dc);
             setCardRevealed(false);
         };
+
         const onDeckShuffled = ({ deckCount: dc }) => {
             setDeckCount(dc);
             setCurrentCard(null);
             setCardRevealed(false);
         };
-        const onPlayersUpdated = (p) => setPlayers(p);
+
+        const onPlayersUpdated = (p) => {
+            setPlayers(p);
+            const me = p.find((pl) => pl.index === playerIndex);
+            setIsHost(Boolean(me?.isHost));
+        };
+
+        const onHostChanged = ({ hostPlayerIndex }) => {
+            setIsHost(playerIndex === hostPlayerIndex);
+        };
+
+        // Tutti i giocatori tornano alla schermata d'attesa
+        const onGameRestarted = ({ roomCode: rc, maxPlayers: mp, players: p }) => {
+            const me = p.find((pl) => pl.index === playerIndex);
+            navigate("/attesa", {
+                replace: true,
+                state: {
+                    roomCode: rc,
+                    playerIndex,
+                    maxPlayers: mp ?? maxPlayers,
+                    isHost: Boolean(me?.isHost),
+                },
+            });
+        };
 
         socket.on("card-drawn", onCardDrawn);
         socket.on("turn-changed", onTurnChanged);
         socket.on("deck-shuffled", onDeckShuffled);
         socket.on("players-updated", onPlayersUpdated);
+        socket.on("host-changed", onHostChanged);
+        socket.on("game-restarted", onGameRestarted);
 
         return () => {
             socket.off("card-drawn", onCardDrawn);
             socket.off("turn-changed", onTurnChanged);
             socket.off("deck-shuffled", onDeckShuffled);
             socket.off("players-updated", onPlayersUpdated);
+            socket.off("host-changed", onHostChanged);
+            socket.off("game-restarted", onGameRestarted);
         };
-    }, []);
+    }, [navigate, playerIndex, maxPlayers]);
 
     // ── Chiudi menu click fuori ───────────────────────────────────────────────
     useEffect(() => {
@@ -109,23 +152,23 @@ export default function Gioco() {
         }
     };
 
-    const handleRimescola = () => socket.emit("shuffle-deck");
+    // Solo l'host può rimescolare
+    const handleRimescola = () => {
+        if (!isHost) return;
+        socket.emit("shuffle-deck");
+    };
 
+    // Solo l'host può ricominciare — emette evento al server
     const handleRicomincia = () => {
+        if (!isHost) return;
         setMenuAperto(false);
-        navigate("/attesa", {
-            state: {
-                roomCode, playerIndex, isHost,
-                mode: location.state?.mode,
-                giocatori: players.map(p => p.name),
-            },
-        });
+        socket.emit("restart-game");
     };
 
     const handleEsci = () => {
         setMenuAperto(false);
         socket.disconnect();
-        navigate("/accesso");
+        navigate("/accesso", { replace: true });
     };
 
     return (
@@ -134,24 +177,53 @@ export default function Gioco() {
 
                 {/* ── TOP NAV ── */}
                 <nav className="gioco-nav">
-                    <button className="gioco-nav-btn gioco-nav-giocatori" onClick={() => setGiocatori(true)}>
+                    <button
+                        className="gioco-nav-btn gioco-nav-giocatori"
+                        onClick={() => setGiocatori(true)}
+                    >
                         <img src={giocatoriSvg} alt="" className="gioco-nav-icon" />
                         <span>Giocatori</span>
                     </button>
 
                     <div className="gioco-nav-right" ref={menuRef}>
-                        <button className="gioco-nav-icon-btn" onClick={() => setAiuto(true)} aria-label="Regole">
+                        <button
+                            className="gioco-nav-icon-btn"
+                            onClick={() => setAiuto(true)}
+                            aria-label="Regole"
+                        >
                             <img src={aiutoSvg} alt="" />
                         </button>
-                        <button className="gioco-nav-icon-btn" aria-expanded={menuAperto} onClick={() => setMenuAperto(v => !v)} aria-label="Menu">
+                        <button
+                            className="gioco-nav-icon-btn"
+                            aria-expanded={menuAperto}
+                            onClick={() => setMenuAperto(v => !v)}
+                            aria-label="Menu"
+                        >
                             <img src={menuSvg} alt="" />
                         </button>
 
                         {menuAperto && (
                             <div className="gioco-dropdown" role="menu">
-                                <button className="gioco-dropdown-item" role="menuitem" onClick={handleRicomincia}>🔄 Ricomincia partita</button>
-                                <div className="gioco-dropdown-divider" />
-                                <button className="gioco-dropdown-item gioco-dropdown-item--danger" role="menuitem" onClick={handleEsci}>🚪 Esci dalla partita</button>
+                                {/* Ricomincia visibile SOLO all'host */}
+                                {isHost && (
+                                    <>
+                                        <button
+                                            className="gioco-dropdown-item"
+                                            role="menuitem"
+                                            onClick={handleRicomincia}
+                                        >
+                                            🔄 Ricomincia partita
+                                        </button>
+                                        <div className="gioco-dropdown-divider" />
+                                    </>
+                                )}
+                                <button
+                                    className="gioco-dropdown-item gioco-dropdown-item--danger"
+                                    role="menuitem"
+                                    onClick={handleEsci}
+                                >
+                                    🚪 Esci dalla partita
+                                </button>
                             </div>
                         )}
                     </div>
@@ -160,7 +232,15 @@ export default function Gioco() {
                 {/* ── CARD SECTION ── */}
                 <div className="gioco-card-section">
                     <div className="gioco-cards-badge" aria-live="polite">
-                        Cards: {deckCount}
+                        Carte: {deckCount}
+                    </div>
+
+                    {/* Turno attuale — visibile a tutti */}
+                    <div className="gioco-turno-label" aria-live="polite">
+                        {isMyTurn
+                            ? "🎯 È il tuo turno!"
+                            : `Turno di: ${nomeAttivo}${attivoIsHost ? " 👑" : ""}`
+                        }
                     </div>
 
                     <div className="gioco-card-wrapper">
@@ -168,7 +248,11 @@ export default function Gioco() {
                             className={`gioco-carta-btn ${cardRevealed ? "scoperta" : ""}`}
                             onClick={handleClick}
                             disabled={mazzoEsaurito || !isMyTurn}
-                            aria-label={isMyTurn ? (cardRevealed ? "Ricopri" : "Scopri") : "Non è il tuo turno"}
+                            aria-label={
+                                isMyTurn
+                                    ? cardRevealed ? "Ricopri" : "Scopri"
+                                    : "Non è il tuo turno"
+                            }
                             style={{ opacity: isMyTurn ? 1 : 0.6 }}
                         >
                             <img
@@ -178,33 +262,52 @@ export default function Gioco() {
                             />
                         </button>
 
-                        {mazzoEsaurito && isMyTurn && (
+                        {/* Rimescola: overlay solo per l'HOST */}
+                        {mazzoEsaurito && isHost && (
                             <div className="gioco-mazzo-esaurito">
-                                <button className="gioco-rimescola-btn" onClick={handleRimescola}>
+                                <button
+                                    className="gioco-rimescola-btn"
+                                    onClick={handleRimescola}
+                                >
                                     🔀 Rimescola il mazzo
                                 </button>
                             </div>
                         )}
-                    </div>
 
-                    {!isMyTurn && (
-                        <p style={{ color: "#fff", fontFamily: "PaulGrotesk, sans-serif", fontWeight: 700, fontSize: 13, marginTop: 6, textAlign: "center", textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
-                            Turno di {giocatoreCorrente}
-                        </p>
-                    )}
+                        {/* Messaggio per i non-host quando il mazzo è esaurito */}
+                        {mazzoEsaurito && !isHost && (
+                            <div className="gioco-mazzo-esaurito">
+                                <p className="gioco-attendi-rimescola">
+                                    In attesa che l'host rimescoli...
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* ── PLAYER CARD ── */}
+                {/* ── PLAYER CARD — mostra sempre IL TUO nome ── */}
                 <div className="gioco-player-card">
-                    <img src={beerPng} alt="Card giocatore" className="gioco-beer-img" draggable="false" />
-                    <span className="gioco-player-name">{giocatoreCorrente.toUpperCase()}</span>
+                    <img
+                        src={beerPng}
+                        alt="Card giocatore"
+                        className="gioco-beer-img"
+                        draggable="false"
+                    />
+                    <span className="gioco-player-name">
+                        {mioNome.toUpperCase()}
+                    </span>
                 </div>
 
             </section>
 
             {/* ── POPUP AIUTO ── */}
             {aiutoAperto && createPortal(
-                <div className="aiuto-overlay" role="dialog" aria-modal="true" onClick={() => setAiuto(false)}>
+                <div
+                    className="aiuto-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    onClick={() => setAiuto(false)}
+                >
                     <div className="aiuto-popup" onClick={e => e.stopPropagation()}>
                         <div className="aiuto-header">
                             <span className="aiuto-title">📖 REGOLE</span>
@@ -225,17 +328,34 @@ export default function Gioco() {
 
             {/* ── POPUP GIOCATORI ── */}
             {giocatoriAperti && createPortal(
-                <div className="aiuto-overlay" role="dialog" aria-modal="true" onClick={() => setGiocatori(false)}>
+                <div
+                    className="aiuto-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    onClick={() => setGiocatori(false)}
+                >
                     <div className="aiuto-popup" onClick={e => e.stopPropagation()}>
                         <div className="aiuto-header">
                             <span className="aiuto-title">👥 GIOCATORI</span>
                             <button className="aiuto-close" onClick={() => setGiocatori(false)}>✕</button>
                         </div>
                         <ol className="aiuto-list">
-                            {players.map((p, i) => (
-                                <li key={i} className={`aiuto-item ${i === currentPlayerIndex ? "aiuto-item--attivo" : ""}`}>
-                                    <span className="aiuto-carta">{i + 1}</span>
-                                    <span className="aiuto-testo">{p.name || `Giocatore ${i + 1}`}</span>
+                            {players.map((p) => (
+                                <li
+                                    key={p.index}
+                                    className={[
+                                        "aiuto-item",
+                                        p.index === currentPlayerIndex ? "aiuto-item--attivo" : "",
+                                        p.connected === false ? "aiuto-item--disconnesso" : "",
+                                    ].join(" ").trim()}
+                                >
+                                    <span className="aiuto-carta">{p.index + 1}</span>
+                                    <span className="aiuto-testo">
+                                        {p.name || `Giocatore ${p.index + 1}`}
+                                        {p.isHost ? " 👑" : ""}
+                                        {p.index === playerIndex ? " (tu)" : ""}
+                                        {p.connected === false ? " — disconnesso" : ""}
+                                    </span>
                                 </li>
                             ))}
                         </ol>

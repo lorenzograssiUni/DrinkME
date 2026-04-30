@@ -2,33 +2,49 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./TavoloAttesa.css";
 import avatarFemale from "../assets/avatars/avatar-female.png";
-import avatarMale   from "../assets/avatars/avatar-male.png";
-import frecceSvg    from "../assets/icons/frecce.svg";
-import genderSvg    from "../assets/icons/gender.svg";
-import { socket }   from "../socket";
+import avatarMale from "../assets/avatars/avatar-male.png";
+import frecceSvg from "../assets/icons/frecce.svg";
+import genderSvg from "../assets/icons/gender.svg";
+import { socket } from "../socket";
 
 const PLACEHOLDER = "INSERISCI NOME";
 
 export default function TavoloAttesa() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { roomCode, playerIndex, maxPlayers, isHost, mode } = location.state ?? {};
+    const {
+        roomCode,
+        playerIndex,
+        maxPlayers,
+        isHost: initialIsHost,
+    } = location.state ?? {};
 
-    const [players, setPlayers]       = useState([]);
-    const [editingId, setEditingId]   = useState(null);
+    const [players, setPlayers] = useState([]);
+    const [isHost, setIsHost] = useState(initialIsHost ?? false);
+    const [editingId, setEditingId] = useState(null);
     const [editingVal, setEditingVal] = useState("");
     const inputRef = useRef(null);
 
-    // ── Socket listeners + richiesta lista al mount ───────────────────────────
+    // ── Socket listeners ──────────────────────────────────────────────────────
     useEffect(() => {
-        const onPlayersUpdated = (updatedPlayers) => setPlayers(updatedPlayers);
+        const onPlayersUpdated = (updatedPlayers) => {
+            setPlayers(updatedPlayers);
+            const me = updatedPlayers.find((p) => p.index === playerIndex);
+            setIsHost(Boolean(me?.isHost));
+        };
+
+        const onHostChanged = ({ hostPlayerIndex }) => {
+            setIsHost(playerIndex === hostPlayerIndex);
+        };
 
         const onGameStarted = ({ players: p, currentPlayerIndex, deck }) => {
+            const me = p.find((pl) => pl.index === playerIndex);
             navigate("/gioco", {
                 state: {
                     roomCode,
                     playerIndex,
-                    isHost,
+                    maxPlayers,
+                    isHost: Boolean(me?.isHost),
                     players: p,
                     currentPlayerIndex,
                     deckCount: deck.length,
@@ -37,18 +53,23 @@ export default function TavoloAttesa() {
         };
 
         socket.on("players-updated", onPlayersUpdated);
-        socket.on("game-started",    onGameStarted);
+        socket.on("host-changed", onHostChanged);
+        socket.on("game-started", onGameStarted);
 
-        // Richiedi la lista corrente al server (gestisce anche refresh di pagina)
         socket.emit("get-players", (current) => {
-            if (current) setPlayers(current);
+            if (current) {
+                setPlayers(current);
+                const me = current.find((p) => p.index === playerIndex);
+                setIsHost(Boolean(me?.isHost));
+            }
         });
 
         return () => {
             socket.off("players-updated", onPlayersUpdated);
-            socket.off("game-started",    onGameStarted);
+            socket.off("host-changed", onHostChanged);
+            socket.off("game-started", onGameStarted);
         };
-    }, [navigate, roomCode, playerIndex, isHost]);
+    }, [navigate, roomCode, playerIndex, maxPlayers]);
 
     // ── Autofocus input ───────────────────────────────────────────────────────
     useEffect(() => {
@@ -61,7 +82,9 @@ export default function TavoloAttesa() {
     // ── Handlers ──────────────────────────────────────────────────────────────
     const toggleAvatar = (player) => {
         if (player.index !== playerIndex) return;
-        socket.emit("update-player", { gender: player.gender === "female" ? "male" : "female" });
+        socket.emit("update-player", {
+            gender: player.gender === "female" ? "male" : "female",
+        });
     };
 
     const startEdit = (player) => {
@@ -77,32 +100,36 @@ export default function TavoloAttesa() {
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === "Enter")  commitEdit();
+        if (e.key === "Enter") commitEdit();
         if (e.key === "Escape") { setEditingId(null); setEditingVal(""); }
     };
 
     const handleIniziaGioco = () => socket.emit("start-game");
 
+    // ── ANNULLA → sempre home ─────────────────────────────────────────────────
     const handleAnnulla = () => {
         socket.disconnect();
-        navigate(mode === "join" ? "/unisciti" : "/crea-partita");
+        navigate("/accesso", { replace: true });
     };
 
-    // ── Lista progressiva: giocatori entrati + 1 slot "In attesa" ─────────────
+    // ── Lista progressiva ─────────────────────────────────────────────────────
     const nextIndex = players.length;
-    const isFull    = nextIndex >= (maxPlayers ?? 6);
-    const slotList  = [
+    const isFull = nextIndex >= (maxPlayers ?? 6);
+
+    const slotList = [
         ...players,
-        ...(!isFull ? [{
-            index:     nextIndex,
-            name:      "",
-            gender:    nextIndex % 2 === 0 ? "female" : "male",
-            connected: false,
-            empty:     true,
-        }] : []),
+        ...(!isFull
+            ? [{
+                index: nextIndex,
+                name: "",
+                gender: nextIndex % 2 === 0 ? "female" : "male",
+                connected: false,
+                empty: true,
+            }]
+            : []),
     ];
 
-    const connectedCount = players.filter(p => p.connected).length;
+    const connectedCount = players.filter((p) => p.connected).length;
     const canStart = isHost && connectedCount >= 2;
 
     return (
@@ -123,16 +150,16 @@ export default function TavoloAttesa() {
 
                         <ol className="attesa-list" aria-label="Giocatori in attesa">
                             {slotList.map((player) => {
-                                const isMine     = player.index === playerIndex;
-                                const isEmpty    = player.empty;
-                                const isCreatore = player.index === 0 && !isEmpty;
+                                const isMine = player.index === playerIndex;
+                                const isEmpty = player.empty;
+                                const isCreatore = player.isHost && !isEmpty;
 
                                 return (
                                     <li
                                         key={player.index}
                                         className={[
                                             "attesa-player",
-                                            isEmpty            ? "attesa-player--empty"        : "",
+                                            isEmpty ? "attesa-player--empty" : "",
                                             !player.connected && !isEmpty ? "attesa-player--disconnected" : "",
                                         ].join(" ").trim()}
                                     >
@@ -177,7 +204,7 @@ export default function TavoloAttesa() {
                                                 <span
                                                     className={[
                                                         "attesa-player-name",
-                                                        isMine    ? "attesa-player-name--editable"    : "",
+                                                        isMine ? "attesa-player-name--editable" : "",
                                                         !player.name ? "attesa-player-name--placeholder" : "",
                                                     ].join(" ").trim()}
                                                     onClick={() => startEdit(player)}
@@ -213,6 +240,7 @@ export default function TavoloAttesa() {
                             In attesa dell'host...
                         </div>
                     )}
+
                     <button
                         className="attesa-btn attesa-btn--annulla"
                         type="button"

@@ -24,7 +24,7 @@
     box-sizing: border-box;
 }
 
-/* Card esterna — bordo solido */
+/* Card esterna */
 .attesa-panel {
     position: absolute;
     top: 195px;
@@ -126,7 +126,7 @@
     flex-shrink: 0;
 }
 
-/* Slot vuoto — opacità ridotta */
+/* Slot vuoto */
 .attesa-player--empty {
     opacity: 0.5;
 }
@@ -165,7 +165,7 @@
     display: block;
 }
 
-/* Testo giocatore */
+/* Info giocatore */
 .attesa-player-info {
     display: flex;
     flex-direction: column;
@@ -208,7 +208,6 @@
     line-height: 1.1;
 }
 
-/* ── Nome editabile ── */
 .attesa-player-name--editable {
     cursor: pointer;
     border-bottom: 1.5px dashed rgba(78, 73, 18, 0.45);
@@ -246,14 +245,16 @@
     appearance: none;
 }
 
-/* Messaggio attesa guest */
+/* ── Messaggio attesa guest ── */
 .attesa-waiting-msg {
     font-family: "PaulGrotesk", Arial, sans-serif;
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 700;
     color: #ffffff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     text-align: center;
+    margin-bottom: 8px;
+    transform: translateY(-40px);
 }
 
 /* Pulsanti INIZIA / ANNULLA */
