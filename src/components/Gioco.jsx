@@ -11,6 +11,7 @@ import { socket } from "../socket";
 import VikingAnimation from "../animations/VikingAnimation";
 import MirrorAnimation from "../animations/MirrorAnimation";
 import MattoAnimation from "../animations/MattoAnimation";
+import SceltaAnimation from "../animations/SceltaAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
@@ -67,6 +68,9 @@ export default function Gioco() {
     const [mattoAttivo, setMattoAttivo] = useState(false);
     const [mattoPlayerName, setMattoPlayerName] = useState("");
 
+    const [sceltaAttivo, setSceltaAttivo] = useState(false);
+    const [sceltaPlayerName, setSceltaPlayerName] = useState("");
+
     const menuRef = useRef(null);
 
     // Ref aggiornate per evitare closure stale nei socket listener
@@ -91,6 +95,11 @@ export default function Gioco() {
             const nome = chi?.name || `Giocatore ${idx + 1}`;
 
             console.log("[card-drawn] valore:", valore, "| idx:", idx, "| nome:", nome);
+
+            if (valore === "2") {
+                setSceltaPlayerName(nome);
+                setSceltaAttivo(true);
+            }
 
             if (valore === "4") {
                 setVikingPlayerIndex(idx);
@@ -372,6 +381,13 @@ export default function Gioco() {
                         {nomeAttivo.toUpperCase()}
                     </span>
                 </div>
+
+                {sceltaAttivo && (
+                    <SceltaAnimation
+                        giocatore={sceltaPlayerName}
+                        onClose={() => setSceltaAttivo(false)}
+                    />
+                )}
 
                 {vikingAttivo && (
                     <VikingAnimation

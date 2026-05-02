@@ -6,7 +6,7 @@ export default function MattoAnimation({ giocatore, onClose }) {
 
             <div className="matto-circle">
                 <div className="matto-scroll-track">
-                    <span className="matto-sssh-scroll">SSSSSSSSSSSSH!</span>
+                    <span className="matto-sssh-scroll">SSSSSSSSHHHHH!</span>
                 </div>
                 <span className="matto-emoji">🤫</span>
             </div>
