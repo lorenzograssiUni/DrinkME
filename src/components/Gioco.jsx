@@ -9,24 +9,25 @@ import backPng from "../assets/images/cards/back.png";
 import beerPng from "../assets/images/beer.png";
 import { socket } from "../socket";
 import VikingAnimation from "../animations/VikingAnimation";
+import MirrorAnimation from "../animations/MirrorAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
 }
 
 const REGOLE = [
-    { carta: "2", testo: "Si for you — scegli chi beve" },
-    { carta: "3", testo: "Si for me — beve chi pesca la carta" },
-    { carta: "4", testo: "Vichingo — fai le corna (mare e remi), l'ultimo che lo fa beve" },
-    { carta: "5", testo: "Specchio — ogni volta che bevi tu, beve anche chi ha ricevuto questa carta" },
-    { carta: "6", testo: "Si for dicks — bevono i maschi" },
-    { carta: "7", testo: "L'ultimo che alza la mano beve" },
-    { carta: "8", testo: "Regola — inventa una regola per tutta la partita" },
-    { carta: "9", testo: "Rima — di' una parola, si fa il giro: chi non rima beve" },
-    { carta: "10", testo: "Categoria — scegli una categoria, si fa il giro: chi non trova beve" },
-    { carta: "J", testo: "Non ho mai — di' qualcosa che non hai mai fatto, chi l'ha fatto beve" },
-    { carta: "Q", testo: "Bevono le donne" },
-    { carta: "K", testo: "Question Master — chi risponde senza fare una domanda beve" },
+    { carta: "2", testo: "Two is for you — Scegli chi beve." },
+    { carta: "3", testo: "Three is for me — Beve chi pesca la carta." },
+    { carta: "4", testo: "Vichingo — Chi pesca fa le corna, i giocatori ai lati remano, gli altri fanno le onde. L'ultimo che lo fa beve! Il vichingo resta finché qualcun altro pesca il 4." },
+    { carta: "5", testo: "Specchio — Scegli un giocatore: ogni volta che bevi, beve anche lui. Si resetta quando qualcun altro pesca il 5." },
+    { carta: "6", testo: "Six for dicks — Bevono i maschi." },
+    { carta: "7", testo: "Bottone — Chi preme per ultimo il tasto beve!" },
+    { carta: "8", testo: "Riposo — Questa volta nessuno beve, vi è andata bene!" },
+    { carta: "9", testo: "Rima — Di' una parola, in senso orario ognuno dice una rima. Chi sbaglia o fa scadere il tempo beve!" },
+    { carta: "10", testo: "Categoria — Scegli una categoria (es. marchi di auto, brand di vestiti…), in senso orario ognuno dice un elemento. Chi sbaglia o fa scadere il tempo beve!" },
+    { carta: "J", testo: "Non ho mai — Chi ha almeno una volta compiuto l'azione che compare beve!" },
+    { carta: "Q", testo: "Bevono le donne." },
+    { carta: "K", testo: "Question Master — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
 ];
 
 export default function Gioco() {
@@ -54,9 +55,13 @@ export default function Gioco() {
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
     const [giocatoriAperti, setGiocatori] = useState(false);
+
     const [vikingAttivo, setVikingAttivo] = useState(false);
     const [vikingPlayerIndex, setVikingPlayerIndex] = useState(null);
     const [vikingPlayerName, setVikingPlayerName] = useState("");
+
+    const [mirrorAttivo, setMirrorAttivo] = useState(false);
+    const [mirrorPlayerName, setMirrorPlayerName] = useState("");
 
     const menuRef = useRef(null);
 
@@ -71,13 +76,21 @@ export default function Gioco() {
             setCardRevealed(true);
             setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
-            if (card.split("-")[0] === "4") {
-                const idx = cpi ?? currentPlayerIndex;
-                const chi = players.find((p) => p.index === idx);
-                const nome = chi?.name || `Giocatore ${idx + 1}`;
+
+            const valore = card.split("-")[0];
+            const idx = cpi ?? currentPlayerIndex;
+            const chi = players.find((p) => p.index === idx);
+            const nome = chi?.name || `Giocatore ${idx + 1}`;
+
+            if (valore === "4") {
                 setVikingPlayerIndex(idx);
                 setVikingPlayerName(nome);
                 setVikingAttivo(true);
+            }
+
+            if (valore === "5") {
+                setMirrorPlayerName(nome);
+                setMirrorAttivo(true);
             }
         };
 
@@ -359,6 +372,13 @@ export default function Gioco() {
                     <VikingAnimation
                         giocatore={vikingPlayerName}
                         onClose={() => setVikingAttivo(false)}
+                    />
+                )}
+
+                {mirrorAttivo && (
+                    <MirrorAnimation
+                        giocatore={mirrorPlayerName}
+                        onClose={() => setMirrorAttivo(false)}
                     />
                 )}
 

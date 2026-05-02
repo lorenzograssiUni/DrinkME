@@ -8,4 +8,12 @@
     <!-- Folder where production build objects will be placed -->
     <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="package-lock.json" />
+    <None Remove="package.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src\assets\fonts\" />
+    <Folder Include="src\assets\icons\" />
+  </ItemGroup>
 </Project>

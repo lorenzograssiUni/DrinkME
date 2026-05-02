@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./TavoloAttesa.css";
 import avatarFemale from "../assets/avatars/avatar-female.png";
@@ -6,6 +6,7 @@ import avatarMale from "../assets/avatars/avatar-male.png";
 import frecceSvg from "../assets/icons/frecce.svg";
 import genderSvg from "../assets/icons/gender.svg";
 import { socket } from "../socket";
+import BeerLoader from "../animations/BeerLoader";
 
 const PLACEHOLDER = "INSERISCI NOME";
 
@@ -24,7 +25,13 @@ export default function TavoloAttesa() {
     const [isHost, setIsHost] = useState(initialIsHost ?? false);
     const [editingId, setEditingId] = useState(null);
     const [editingVal, setEditingVal] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [pendingNav, setPendingNav] = useState(null);
     const inputRef = useRef(null);
+
+    const goToGame = useCallback((navState) => {
+        navigate("/gioco", { replace: true, state: navState });
+    }, [navigate]);
 
     useEffect(() => {
         const onPlayersUpdated = (updatedPlayers) => {
@@ -39,22 +46,20 @@ export default function TavoloAttesa() {
 
         const onGameStarted = ({ players: p, currentPlayerIndex, deck, hostSocketId }) => {
             const me = p.find((pl) => pl.index === playerIndex);
-
-            navigate("/gioco", {
-                replace: true,
-                state: {
-                    roomCode,
-                    playerIndex,
-                    maxPlayers,
-                    isHost: Boolean(me?.isHost),
-                    players: p,
-                    currentPlayerIndex,
-                    deckCount: deck.length,
-                    currentCard: null,
-                    cardRevealed: false,
-                    hostSocketId,
-                },
-            });
+            const navState = {
+                roomCode,
+                playerIndex,
+                maxPlayers,
+                isHost: Boolean(me?.isHost),
+                players: p,
+                currentPlayerIndex,
+                deckCount: deck.length,
+                currentCard: null,
+                cardRevealed: false,
+                hostSocketId,
+            };
+            setLoading(true);
+            setPendingNav(navState);
         };
 
         socket.on("players-updated", onPlayersUpdated);
@@ -85,7 +90,6 @@ export default function TavoloAttesa() {
 
     const toggleAvatar = (player) => {
         if (player.index !== playerIndex) return;
-
         socket.emit("update-player", {
             gender: player.gender === "female" ? "male" : "female",
         });
@@ -128,15 +132,13 @@ export default function TavoloAttesa() {
     const slotList = [
         ...players,
         ...(!isFull
-            ? [
-                {
-                    index: nextIndex,
-                    name: "",
-                    gender: nextIndex % 2 === 0 ? "female" : "male",
-                    connected: false,
-                    empty: true,
-                },
-            ]
+            ? [{
+                index: nextIndex,
+                name: "",
+                gender: nextIndex % 2 === 0 ? "female" : "male",
+                connected: false,
+                empty: true,
+            }]
             : []),
     ];
 
@@ -255,6 +257,11 @@ export default function TavoloAttesa() {
                         ANNULLA
                     </button>
                 </div>
+
+                {loading && (
+                    <BeerLoader onComplete={() => goToGame(pendingNav)} />
+                )}
+
             </section>
         </main>
     );
