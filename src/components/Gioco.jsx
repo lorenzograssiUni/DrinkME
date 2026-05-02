@@ -10,6 +10,7 @@ import beerPng from "../assets/images/beer.png";
 import { socket } from "../socket";
 import VikingAnimation from "../animations/VikingAnimation";
 import MirrorAnimation from "../animations/MirrorAnimation";
+import MattoAnimation from "../animations/MattoAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
@@ -27,7 +28,7 @@ const REGOLE = [
     { carta: "10", testo: "Categoria — Scegli una categoria (es. marchi di auto, brand di vestiti…), in senso orario ognuno dice un elemento. Chi sbaglia o fa scadere il tempo beve!" },
     { carta: "J", testo: "Non ho mai — Chi ha almeno una volta compiuto l'azione che compare beve!" },
     { carta: "Q", testo: "Bevono le donne." },
-    { carta: "K", testo: "Question Master — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
+    { carta: "K", testo: "Il Matto — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
 ];
 
 export default function Gioco() {
@@ -63,7 +64,14 @@ export default function Gioco() {
     const [mirrorAttivo, setMirrorAttivo] = useState(false);
     const [mirrorPlayerName, setMirrorPlayerName] = useState("");
 
+    const [mattoAttivo, setMattoAttivo] = useState(false);
+    const [mattoPlayerName, setMattoPlayerName] = useState("");
+
     const menuRef = useRef(null);
+
+    // Ref aggiornate per evitare closure stale nei socket listener
+    const playersRef = useRef(players);
+    useEffect(() => { playersRef.current = players; }, [players]);
 
     const isMyTurn = playerIndex === currentPlayerIndex;
     const mazzoEsaurito = deckCount === 0 && !cardRevealed;
@@ -78,9 +86,11 @@ export default function Gioco() {
             if (cpi !== undefined) setCPI(cpi);
 
             const valore = card.split("-")[0];
-            const idx = cpi ?? currentPlayerIndex;
-            const chi = players.find((p) => p.index === idx);
+            const idx = cpi ?? 0;
+            const chi = playersRef.current.find((p) => p.index === idx);
             const nome = chi?.name || `Giocatore ${idx + 1}`;
+
+            console.log("[card-drawn] valore:", valore, "| idx:", idx, "| nome:", nome);
 
             if (valore === "4") {
                 setVikingPlayerIndex(idx);
@@ -91,6 +101,11 @@ export default function Gioco() {
             if (valore === "5") {
                 setMirrorPlayerName(nome);
                 setMirrorAttivo(true);
+            }
+
+            if (valore === "13") {
+                setMattoPlayerName(nome);
+                setMattoAttivo(true);
             }
         };
 
@@ -181,7 +196,8 @@ export default function Gioco() {
             socket.off("game-restarted", onGameRestarted);
             socket.off("game-state-sync", onGameStateSync);
         };
-    }, [navigate, playerIndex, maxPlayers, players, currentPlayerIndex]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         function handleOutside(e) {
@@ -189,7 +205,6 @@ export default function Gioco() {
                 setMenuAperto(false);
             }
         }
-
         if (menuAperto) document.addEventListener("mousedown", handleOutside);
         return () => document.removeEventListener("mousedown", handleOutside);
     }, [menuAperto]);
@@ -202,17 +217,14 @@ export default function Gioco() {
                 setMenuAperto(false);
             }
         }
-
         if (aiutoAperto || giocatoriAperti || menuAperto) {
             document.addEventListener("keydown", handleKey);
         }
-
         return () => document.removeEventListener("keydown", handleKey);
     }, [aiutoAperto, giocatoriAperti, menuAperto]);
 
     const handleClick = () => {
         if (!isMyTurn) return;
-
         if (!cardRevealed) {
             if (deckCount === 0) return;
             socket.emit("draw-card");
@@ -285,7 +297,6 @@ export default function Gioco() {
                                         >
                                             🔄 Ricomincia partita
                                         </button>
-
                                         <div className="gioco-dropdown-divider" />
                                     </>
                                 )}
@@ -314,20 +325,14 @@ export default function Gioco() {
                             disabled={mazzoEsaurito || !isMyTurn}
                             aria-label={
                                 isMyTurn
-                                    ? cardRevealed
-                                        ? "Ricopri"
-                                        : "Scopri"
+                                    ? cardRevealed ? "Ricopri" : "Scopri"
                                     : "Non è il tuo turno"
                             }
                             style={{ opacity: !isMyTurn && !cardRevealed ? 0.6 : 1 }}
                         >
                             <img
                                 src={cardRevealed && currentCard ? cartaPath(currentCard) : backPng}
-                                alt={
-                                    cardRevealed && currentCard
-                                        ? `Carta ${currentCard}`
-                                        : "Carta coperta"
-                                }
+                                alt={cardRevealed && currentCard ? `Carta ${currentCard}` : "Carta coperta"}
                                 className="gioco-carta-img"
                             />
                         </button>
@@ -382,6 +387,13 @@ export default function Gioco() {
                     />
                 )}
 
+                {mattoAttivo && (
+                    <MattoAnimation
+                        giocatore={mattoPlayerName}
+                        onClose={() => setMattoAttivo(false)}
+                    />
+                )}
+
             </section>
 
             {aiutoAperto &&
@@ -395,11 +407,8 @@ export default function Gioco() {
                         <div className="aiuto-popup" onClick={(e) => e.stopPropagation()}>
                             <div className="aiuto-header">
                                 <span className="aiuto-title">📖 REGOLE</span>
-                                <button className="aiuto-close" onClick={() => setAiuto(false)}>
-                                    ✕
-                                </button>
+                                <button className="aiuto-close" onClick={() => setAiuto(false)}>✕</button>
                             </div>
-
                             <ol className="aiuto-list">
                                 {REGOLE.map(({ carta, testo }) => (
                                     <li key={carta} className="aiuto-item">
@@ -424,11 +433,8 @@ export default function Gioco() {
                         <div className="aiuto-popup" onClick={(e) => e.stopPropagation()}>
                             <div className="aiuto-header">
                                 <span className="aiuto-title">👥 GIOCATORI</span>
-                                <button className="aiuto-close" onClick={() => setGiocatori(false)}>
-                                    ✕
-                                </button>
+                                <button className="aiuto-close" onClick={() => setGiocatori(false)}>✕</button>
                             </div>
-
                             <ol className="aiuto-list">
                                 {players.map((p) => (
                                     <li

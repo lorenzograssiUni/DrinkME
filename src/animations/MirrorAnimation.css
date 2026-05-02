@@ -13,7 +13,7 @@
     background: rgba(10, 10, 20, 0.82);
 }
 
-/* ── Cerchio specchio ── */
+/* ── Cerchio specchio — bordo grigio/argento ── */
 .mirror-circle {
     position: relative;
     width: 220px;
@@ -21,108 +21,68 @@
     border-radius: 50%;
     overflow: hidden;
     border: 5px solid #e8e8e8;
-    box-shadow: 0 0 0 5px #8a8a9a, 0 0 30px rgba(120, 180, 220, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.4);
-    background: #b8dff5;
+    box-shadow: 0 0 0 5px #8a8a9a, 0 0 30px rgba(180, 180, 220, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.4);
+    background: #6ecef5;
 }
 
-/* ── Sagoma nera ── */
-.mirror-silhouette {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    background: #0a0a12;
-    animation: silhouette-reveal 0.8s ease 1.2s forwards;
-}
+    /* ── Gradiente azzurro dentro il cerchio ── */
+    .mirror-circle::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: linear-gradient( 160deg, #a8e4f8 0%, #6ecef5 40%, #4ab8e8 100% );
+    }
 
-/* ── Immagine specchio.png ── */
+/* ── Immagine specchio.png — abbassata ── */
 .mirror-reveal {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center top;
+    object-position: center 15%;
     z-index: 1;
     filter: brightness(0);
-    animation: image-brighten 1s ease 1.2s forwards;
+    animation: image-brighten 0.45s ease 1.3s forwards;
 }
 
-/* ── Riflessi — base comune ── */
+/* ── 3 strisce riflesso diagonali parallele ── */
 .mirror-glare {
     position: absolute;
-    z-index: 3;
+    z-index: 2;
     pointer-events: none;
-    top: -50px;
-    height: 320px;
+    top: -60px;
+    height: 360px;
+    border-radius: 40px;
+    left: -260px;
 }
 
-/* ════════════════════════
-   PATTERN A — angolo 30°, fascio largo
-════════════════════════ */
-.mirror-glare--a1 {
-    width: 36px;
-    left: -80px;
-    transform: rotate(30deg);
-    border-radius: 50%;
-    background: radial-gradient( ellipse at center, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 60%, transparent 100% );
-    filter: blur(5px);
-    opacity: 0;
-    animation: sweep-a 4s ease-in-out 2.5s infinite;
+.mirror-glare--1 {
+    width: 48px;
+    left: -260px;
+    transform: rotate(32deg);
+    background: linear-gradient( 90deg, transparent 0%, rgba(255, 255, 255, 0.18) 25%, rgba(255, 255, 255, 0.28) 50%, rgba(255, 255, 255, 0.18) 75%, transparent 100% );
+    filter: blur(3px);
+    animation: strisce-sweep 3s ease-in-out 2.3s infinite;
 }
 
-.mirror-glare--a2 {
-    width: 7px;
-    left: -80px;
-    transform: rotate(30deg);
-    border-radius: 4px;
-    background: linear-gradient( 180deg, transparent 0%, rgba(255, 255, 255, 0.10) 15%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.10) 85%, transparent 100% );
+.mirror-glare--2 {
+    width: 28px;
+    left: -260px;
+    transform: rotate(32deg);
+    background: linear-gradient( 90deg, transparent 0%, rgba(255, 255, 255, 0.14) 25%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.14) 75%, transparent 100% );
+    filter: blur(2px);
+    animation: strisce-sweep 3s ease-in-out 2.52s infinite;
+}
+
+.mirror-glare--3 {
+    width: 12px;
+    left: -260px;
+    transform: rotate(32deg);
+    background: linear-gradient( 90deg, transparent 0%, rgba(255, 255, 255, 0.10) 30%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.10) 70%, transparent 100% );
     filter: blur(1px);
-    opacity: 0;
-    animation: sweep-a 4s ease-in-out 2.5s infinite;
-}
-
-.mirror-glare--a3 {
-    width: 2px;
-    left: -80px;
-    transform: rotate(30deg);
-    border-radius: 1px;
-    background: linear-gradient( 180deg, transparent 0%, rgba(255, 255, 255, 0.07) 20%, rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.07) 80%, transparent 100% );
-    opacity: 0;
-    animation: sweep-a 4s ease-in-out 2.65s infinite;
-}
-
-/* ════════════════════════
-   PATTERN B — angolo 15°, fascio sottile
-════════════════════════ */
-.mirror-glare--b1 {
-    width: 24px;
-    left: -80px;
-    transform: rotate(15deg);
-    border-radius: 50%;
-    background: radial-gradient( ellipse at center, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 55%, transparent 100% );
-    filter: blur(4px);
-    opacity: 0;
-    animation: sweep-b 4s ease-in-out 4.8s infinite;
-}
-
-.mirror-glare--b2 {
-    width: 4px;
-    left: -80px;
-    transform: rotate(15deg);
-    border-radius: 2px;
-    background: linear-gradient( 180deg, transparent 0%, rgba(255, 255, 255, 0.08) 20%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.08) 80%, transparent 100% );
-    filter: blur(0.8px);
-    opacity: 0;
-    animation: sweep-b 4s ease-in-out 4.8s infinite;
-}
-
-.mirror-glare--b3 {
-    width: 1.5px;
-    left: -80px;
-    transform: rotate(15deg);
-    background: linear-gradient( 180deg, transparent 0%, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.05) 75%, transparent 100% );
-    opacity: 0;
-    animation: sweep-b 4s ease-in-out 4.95s infinite;
+    animation: strisce-sweep 3s ease-in-out 2.68s infinite;
 }
 
 /* ── Testo ── */
@@ -172,23 +132,13 @@
     }
 }
 
-@keyframes silhouette-reveal {
-    from {
-        opacity: 1;
-    }
-
-    to {
-        opacity: 0;
-    }
-}
-
 @keyframes image-brighten {
     0% {
         filter: brightness(0);
     }
 
     40% {
-        filter: brightness(0.3);
+        filter: brightness(0.5);
     }
 
     100% {
@@ -196,10 +146,9 @@
     }
 }
 
-/* Pattern A: entra da -80px, attraversa i 220px del cerchio, esce a 340px */
-@keyframes sweep-a {
+@keyframes strisce-sweep {
     0% {
-        left: -80px;
+        left: -260px;
         opacity: 0;
     }
 
@@ -207,43 +156,23 @@
         opacity: 1;
     }
 
-    45% {
-        opacity: 0.8;
-    }
-
-    70% {
-        opacity: 0;
-        left: 340px;
-    }
-
-    100% {
-        left: 340px;
-        opacity: 0;
-    }
-}
-
-/* Pattern B: stesso range, leggermente più veloce nel fade */
-@keyframes sweep-b {
-    0% {
-        left: -80px;
-        opacity: 0;
-    }
-
-    10% {
+    42% {
+        left: 120px;
         opacity: 0.9;
     }
 
-    50% {
-        opacity: 0.7;
+    60% {
+        left: 200px;
+        opacity: 0.6;
     }
 
-    68% {
-        opacity: 0;
+    80% {
         left: 340px;
+        opacity: 0;
     }
 
     100% {
-        left: 340px;
+        left: 480px;
         opacity: 0;
     }
 }

@@ -6,7 +6,6 @@ export default function MirrorAnimation({ giocatore, onClose }) {
         <div className="mirror-overlay" onClick={onClose}>
 
             <div className="mirror-circle">
-                <div className="mirror-silhouette" />
                 <img
                     src={specchioPng}
                     alt="Specchio"
@@ -21,7 +20,6 @@ export default function MirrorAnimation({ giocatore, onClose }) {
             <p className="mirror-titolo">{giocatore} ha lo Specchio!</p>
             <span className="mirror-sottotitolo">Scegli chi beve con te</span>
             <span className="mirror-emoji">🍺🪞🍺</span>
-
             <span className="mirror-hint">Tocca per continuare</span>
 
         </div>
