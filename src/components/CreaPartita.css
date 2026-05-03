@@ -27,11 +27,11 @@
     width: 80%;
     text-align: center;
     font-family: "CorpSansRdAlt", Arial, sans-serif;
-    font-size: clamp(1.8rem, 5.5svh, 50px);
+    font-size: clamp(1.4rem, 4svh, 50px);
     line-height: 0.95;
     letter-spacing: 0.02em;
     color: #d9a441;
-    -webkit-text-stroke: 2px #4e4912;
+    -webkit-text-stroke: clamp(1px, 0.25svh, 2px);
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
 }
 
