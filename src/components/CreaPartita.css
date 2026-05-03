@@ -2,13 +2,15 @@
     min-height: 100svh;
     display: grid;
     place-items: center;
-    padding: 16px;
+    padding: 0;
     background: #ffffff;
 }
 
 .crea-partita-screen {
-    width: min(100%, 402px);
+    height: 100svh;
+    width: auto;
     aspect-ratio: 402 / 894;
+    max-width: 100vw;
     position: relative;
     overflow: hidden;
     background-image: url("../assets/images/crea-partita-bg.jpg");
@@ -19,13 +21,13 @@
 
 .crea-partita-title {
     position: absolute;
-    top: 120px;
+    top: 13.4%;
     left: 50%;
     transform: translateX(-50%);
-    width: 320px;
+    width: 80%;
     text-align: center;
     font-family: "CorpSansRdAlt", Arial, sans-serif;
-    font-size: 50px;
+    font-size: clamp(2rem, 5.5svh, 50px);
     line-height: 0.95;
     letter-spacing: 0.02em;
     color: #d9a441;
@@ -35,7 +37,7 @@
 
 .crea-partita-subtitle {
     position: absolute;
-    top: 306px;
+    top: 34.2%;
     left: 50%;
     transform: translateX(-50%);
     min-height: 46px;
@@ -57,10 +59,10 @@
 
 .crea-partita-selector {
     position: absolute;
-    top: 390px;
+    top: 43.6%;
     left: 50%;
     transform: translateX(-50%);
-    width: 332px;
+    width: 82%;
 }
 
 .numero-giocatori {
@@ -147,15 +149,15 @@
 }
 
 .crea-partita-primary-button {
-    top: 618px;
-    width: 295px;
+    top: 69.1%;
+    width: 73%;
     min-height: 57px;
     background: #e2b04e;
 }
 
 .crea-partita-secondary-button {
-    top: 699px;
-    width: 205px;
+    top: 78.1%;
+    width: 51%;
     min-height: 57px;
     background: #c93e37;
 }
@@ -182,15 +184,4 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
-}
-
-@media (max-width: 420px) {
-    .crea-partita-page {
-        padding: 0;
-    }
-
-    .crea-partita-screen {
-        width: 100vw;
-        aspect-ratio: 402 / 894;
-    }
 }
