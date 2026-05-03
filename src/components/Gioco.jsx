@@ -12,6 +12,7 @@ import VikingAnimation from "../animations/VikingAnimation";
 import MirrorAnimation from "../animations/MirrorAnimation";
 import MattoAnimation from "../animations/MattoAnimation";
 import SceltaAnimation from "../animations/SceltaAnimation";
+import BeviAnimation from "../animations/BeviAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
@@ -71,9 +72,11 @@ export default function Gioco() {
     const [sceltaAttivo, setSceltaAttivo] = useState(false);
     const [sceltaPlayerName, setSceltaPlayerName] = useState("");
 
+    const [beviAttivo, setBeviAttivo] = useState(false);
+    const [beviPlayerName, setBeviPlayerName] = useState("");
+
     const menuRef = useRef(null);
 
-    // Ref aggiornate per evitare closure stale nei socket listener
     const playersRef = useRef(players);
     useEffect(() => { playersRef.current = players; }, [players]);
 
@@ -99,6 +102,11 @@ export default function Gioco() {
             if (valore === "2") {
                 setSceltaPlayerName(nome);
                 setSceltaAttivo(true);
+            }
+
+            if (valore === "3") {
+                setBeviPlayerName(nome);
+                setBeviAttivo(true);
             }
 
             if (valore === "4") {
@@ -386,6 +394,13 @@ export default function Gioco() {
                     <SceltaAnimation
                         giocatore={sceltaPlayerName}
                         onClose={() => setSceltaAttivo(false)}
+                    />
+                )}
+
+                {beviAttivo && (
+                    <BeviAnimation
+                        giocatore={beviPlayerName}
+                        onClose={() => setBeviAttivo(false)}
                     />
                 )}
 

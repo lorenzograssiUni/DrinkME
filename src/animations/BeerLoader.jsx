@@ -25,4 +25,4 @@ export default function BeerLoader({ onComplete }) {
             </div>
         </div>
     );
-}
+}     
