@@ -33,7 +33,7 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
     color: #fff;
     font-family: "PaulGrotesk", Arial, sans-serif;
-    font-size: clamp(1.5rem, 5vw, 2.4rem);
+    font-size: clamp(1rem, 3svh, 2.4rem);
     line-height: 1;
     text-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
     display: flex;

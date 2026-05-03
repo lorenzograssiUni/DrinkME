@@ -27,7 +27,7 @@
     width: 80%;
     text-align: center;
     font-family: "CorpSansRdAlt", Arial, sans-serif;
-    font-size: clamp(2rem, 5.5svh, 50px);
+    font-size: clamp(1.8rem, 5.5svh, 50px);
     line-height: 0.95;
     letter-spacing: 0.02em;
     color: #d9a441;
@@ -40,8 +40,8 @@
     top: 34.2%;
     left: 50%;
     transform: translateX(-50%);
-    min-height: 46px;
-    padding: 10px 18px;
+    min-height: 40px;
+    padding: 8px 18px;
     border: 2px solid #4e4912;
     border-radius: 999px;
     background: #e2b04e;
@@ -50,7 +50,7 @@
     align-items: center;
     justify-content: center;
     font-family: "PaulGrotesk", Arial, sans-serif;
-    font-size: 22px;
+    font-size: clamp(0.9rem, 2.8svh, 22px);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: #562f06;
@@ -74,7 +74,7 @@
 .numero-giocatori-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    gap: 12px;
 }
 
 .numero-chip {
@@ -85,7 +85,7 @@
 
 .numero-chip-inner {
     width: 100%;
-    min-height: 52px;
+    min-height: 44px;
     padding: 5px;
     border: 2px solid #4e4912;
     border-radius: 18px;
@@ -94,7 +94,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
 }
 
 .numero-chip.is-selected .numero-chip-inner {
@@ -102,15 +102,15 @@
 }
 
 .numero-chip-icon-wrap {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     position: relative;
-    flex: 0 0 26px;
+    flex: 0 0 20px;
 }
 
 .numero-chip-icon {
-    width: 22px;
-    height: 24px;
+    width: 18px;
+    height: 20px;
     position: absolute;
     top: 1px;
     left: 0;
@@ -118,7 +118,7 @@
 
 .numero-chip-label {
     font-family: Arial, sans-serif;
-    font-size: 28px;
+    font-size: clamp(1rem, 2.8svh, 28px);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
@@ -126,7 +126,7 @@
 }
 
     .numero-chip-label.is-ten {
-        font-size: 26px;
+        font-size: clamp(0.9rem, 2.5svh, 26px);
         letter-spacing: -0.03em;
     }
 
@@ -139,7 +139,7 @@
     border-radius: 999px;
     color: #ffffff;
     font-family: "PaulGrotesk", Arial, sans-serif;
-    font-size: 35px;
+    font-size: clamp(1.2rem, 3.5svh, 35px);
     font-weight: 700;
     line-height: 1;
     text-shadow: 0 4px 4px rgba(0, 0, 0, 0.35);
@@ -151,14 +151,14 @@
 .crea-partita-primary-button {
     top: 69.1%;
     width: 73%;
-    min-height: 57px;
+    min-height: 44px;
     background: #e2b04e;
 }
 
 .crea-partita-secondary-button {
     top: 78.1%;
     width: 51%;
-    min-height: 57px;
+    min-height: 44px;
     background: #c93e37;
 }
 
