@@ -99,31 +99,33 @@ export default function Gioco() {
 
             console.log("[card-drawn] valore:", valore, "| idx:", idx, "| nome:", nome);
 
-            if (valore === "2") {
-                setSceltaPlayerName(nome);
-                setSceltaAttivo(true);
-            }
+            setTimeout(() => {
+                if (valore === "2") {
+                    setSceltaPlayerName(nome);
+                    setSceltaAttivo(true);
+                }
 
-            if (valore === "3") {
-                setBeviPlayerName(nome);
-                setBeviAttivo(true);
-            }
+                if (valore === "3") {
+                    setBeviPlayerName(nome);
+                    setBeviAttivo(true);
+                }
 
-            if (valore === "4") {
-                setVikingPlayerIndex(idx);
-                setVikingPlayerName(nome);
-                setVikingAttivo(true);
-            }
+                if (valore === "4") {
+                    setVikingPlayerIndex(idx);
+                    setVikingPlayerName(nome);
+                    setVikingAttivo(true);
+                }
 
-            if (valore === "5") {
-                setMirrorPlayerName(nome);
-                setMirrorAttivo(true);
-            }
+                if (valore === "5") {
+                    setMirrorPlayerName(nome);
+                    setMirrorAttivo(true);
+                }
 
-            if (valore === "13") {
-                setMattoPlayerName(nome);
-                setMattoAttivo(true);
-            }
+                if (valore === "13") {
+                    setMattoPlayerName(nome);
+                    setMattoAttivo(true);
+                }
+            }, 1000);
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
