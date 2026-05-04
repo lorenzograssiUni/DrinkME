@@ -13,6 +13,7 @@ import MirrorAnimation from "../animations/MirrorAnimation";
 import MattoAnimation from "../animations/MattoAnimation";
 import SceltaAnimation from "../animations/SceltaAnimation";
 import BeviAnimation from "../animations/BeviAnimation";
+import DonneAnimation from "../animations/DonneAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
@@ -76,6 +77,8 @@ export default function Gioco() {
     const [beviAttivo, setBeviAttivo] = useState(false);
     const [beviPlayerName, setBeviPlayerName] = useState("");
 
+    const [donneAttivo, setDonneAttivo] = useState(false);
+
     const menuRef = useRef(null);
     const playersRef = useRef(players);
     useEffect(() => { playersRef.current = players; }, [players]);
@@ -104,6 +107,7 @@ export default function Gioco() {
                 if (valore === "3") { setBeviPlayerName(nome); setBeviAttivo(true); }
                 if (valore === "4") { setVikingPlayerIndex(idx); setVikingPlayerName(nome); setVikingAttivo(true); }
                 if (valore === "5") { setMirrorPlayerName(nome); setMirrorAttivo(true); }
+                if (valore === "12") { setDonneAttivo(true); }
                 if (valore === "13") { setMattoPlayerName(nome); setMattoAttivo(true); }
             }, 250);
         };
@@ -223,7 +227,6 @@ export default function Gioco() {
                     <div className="gioco-cards-badge" aria-live="polite">Carte: {deckCount}</div>
 
                     <div className="gioco-card-wrapper">
-                        {/* Contenitore prospettico */}
                         <button
                             className="gioco-carta-btn"
                             onClick={handleClick}
@@ -231,11 +234,8 @@ export default function Gioco() {
                             aria-label={isMyTurn ? (cardRevealed ? "Ricopri" : "Scopri") : "Non è il tuo turno"}
                             style={{ opacity: !isMyTurn && !cardRevealed ? 0.6 : 1 }}
                         >
-                            {/* Flipper: ruota di 180deg quando la carta è scoperta */}
                             <div className={`carta-flipper${cardRevealed ? " flipped" : ""}`}>
-                                {/* Faccia FRONT: back.png */}
                                 <img src={backPng} alt="Carta coperta" className="gioco-carta-img carta-front" />
-                                {/* Faccia BACK: carta reale (già caricata, nascosta dal backface) */}
                                 <img
                                     src={currentCard ? cartaPath(currentCard) : backPng}
                                     alt={currentCard ? `Carta ${currentCard}` : "Carta coperta"}
@@ -267,6 +267,7 @@ export default function Gioco() {
 
                 {sceltaAttivo && <SceltaAnimation giocatore={sceltaPlayerName} onClose={() => setSceltaAttivo(false)} />}
                 {beviAttivo && <BeviAnimation giocatore={beviPlayerName} onClose={() => setBeviAttivo(false)} />}
+                {donneAttivo && <DonneAnimation onClose={() => setDonneAttivo(false)} />}
                 {vikingAttivo && <VikingAnimation giocatore={vikingPlayerName} onClose={() => setVikingAttivo(false)} />}
                 {mirrorAttivo && <MirrorAnimation giocatore={mirrorPlayerName} onClose={() => setMirrorAttivo(false)} />}
                 {mattoAttivo && <MattoAnimation giocatore={mattoPlayerName} onClose={() => setMattoAttivo(false)} />}
