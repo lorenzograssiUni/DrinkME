@@ -33,11 +33,11 @@
     overflow: hidden;
 }
 
-/* ── Calice CSS ── */
+/* ── Calice CSS - z-index alto per stare sopra le emoji ── */
 .icon__glass-wine {
     box-sizing: border-box;
     position: relative;
-    z-index: 2;
+    z-index: 3;
     --size: 58px;
     --border-width: calc(var(--size) / 30);
     --fill: 25%;
@@ -109,31 +109,38 @@
     100% { background-size: 390% 50%, 100% calc(var(--fill) * 12); background-position: center 0px,  center bottom; }
 }
 
-/* ── Cuori e stelline ── */
+/* ── Emoji di sfondo - z-index 1 (dietro al bicchiere) ── */
 .donne-cuore {
     position: absolute;
     pointer-events: none;
-    z-index: 3;
+    z-index: 1;
+    line-height: 1;
     animation: cuore-float var(--dur, 2s) ease-in-out var(--delay, 0s) infinite;
 }
 
-/* Posizioni sparse in tutto il cerchio */
-.c1  { top: 12px;  left: 18px;  font-size: 18px; --dur: 2.1s; --delay: 0.0s; }
-.c2  { top: 8px;   left: 55%;   font-size: 13px; --dur: 1.8s; --delay: 0.3s; }
-.c3  { top: 18px;  right: 20px; font-size: 16px; --dur: 2.4s; --delay: 0.6s; }
-.c4  { top: 50%;   left: 10px;  font-size: 14px; --dur: 2.0s; --delay: 0.9s; }
-.c5  { top: 45%;   right: 12px; font-size: 17px; --dur: 2.2s; --delay: 0.2s; }
-.c6  { bottom: 18px; left: 20px; font-size: 12px; --dur: 1.9s; --delay: 1.1s; }
-.c7  { bottom: 22px; left: 40%;  font-size: 16px; --dur: 2.3s; --delay: 0.5s; }
-.c8  { bottom: 14px; right: 18px; font-size: 15px; --dur: 2.0s; --delay: 0.8s; }
-.c9  { top: 30%;  left: 22px;  font-size: 13px; --dur: 2.5s; --delay: 1.4s; }
-.c10 { top: 28%;  right: 16px; font-size: 19px; --dur: 1.7s; --delay: 0.4s; }
+/*
+  Distribuite sul perimetro del cerchio, evitando il centro (zona 80x100px attorno al bicchiere).
+  Il cerchio è 220x220, quindi il centro è a 110,110.
+  Tengo le emoji a: angoli, bordi laterali alti/bassi.
+*/
+.c1  { top: 10px;   left: 12px;  font-size: 28px; --dur: 2.2s; --delay: 0.0s; }
+.c2  { top: 6px;    left: 82px;  font-size: 22px; --dur: 1.9s; --delay: 0.5s; }
+.c3  { top: 10px;   right: 14px; font-size: 26px; --dur: 2.4s; --delay: 0.2s; }
+.c4  { top: 68px;   left: 6px;   font-size: 24px; --dur: 2.0s; --delay: 0.8s; }
+.c5  { top: 68px;   right: 8px;  font-size: 26px; --dur: 2.3s; --delay: 0.3s; }
+.c6  { bottom: 68px; left: 8px;  font-size: 22px; --dur: 2.1s; --delay: 1.0s; }
+.c7  { bottom: 68px; right: 10px; font-size: 24px; --dur: 1.8s; --delay: 0.6s; }
+.c8  { bottom: 10px; left: 14px; font-size: 26px; --dur: 2.5s; --delay: 0.4s; }
+.c9  { bottom: 6px;  left: 82px; font-size: 20px; --dur: 2.0s; --delay: 1.2s; }
+.c10 { bottom: 10px; right: 12px; font-size: 28px; --dur: 2.2s; --delay: 0.7s; }
+.c11 { top: 38px;   left: 30px;  font-size: 20px; --dur: 2.6s; --delay: 0.9s; }
+.c12 { top: 38px;   right: 28px; font-size: 22px; --dur: 1.7s; --delay: 0.1s; }
 
 @keyframes cuore-float {
-    0%   { opacity: 0;   transform: scale(0.5) translateY(0px); }
-    25%  { opacity: 1;   transform: scale(1.2) translateY(-8px); }
-    70%  { opacity: 0.6; transform: scale(1.0) translateY(-18px); }
-    100% { opacity: 0;   transform: scale(0.7) translateY(-28px); }
+    0%   { opacity: 0;   transform: scale(0.6) translateY(0px); }
+    25%  { opacity: 0.75; transform: scale(1.1) translateY(-6px); }
+    70%  { opacity: 0.5; transform: scale(1.0) translateY(-14px); }
+    100% { opacity: 0;   transform: scale(0.8) translateY(-22px); }
 }
 
 /* ── Testi ── */
