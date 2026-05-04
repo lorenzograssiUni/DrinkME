@@ -115,15 +115,8 @@
 }
 
 @keyframes dropdownOpen {
-    from {
-        opacity: 0;
-        transform: scale(0.92) translateY(-6px);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
+    from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .gioco-dropdown-code {
@@ -155,22 +148,12 @@
 }
 
     .gioco-dropdown-item:hover,
-    .gioco-dropdown-item:focus-visible {
-        background: rgba(78, 73, 18, 0.1);
-    }
+    .gioco-dropdown-item:focus-visible { background: rgba(78, 73, 18, 0.1); }
+    .gioco-dropdown-item:active         { background: rgba(78, 73, 18, 0.2); }
 
-    .gioco-dropdown-item:active {
-        background: rgba(78, 73, 18, 0.2);
-    }
-
-.gioco-dropdown-item--danger {
-    color: #bd2932;
-}
-
+.gioco-dropdown-item--danger { color: #bd2932; }
     .gioco-dropdown-item--danger:hover,
-    .gioco-dropdown-item--danger:focus-visible {
-        background: rgba(189, 41, 50, 0.08);
-    }
+    .gioco-dropdown-item--danger:focus-visible { background: rgba(189, 41, 50, 0.08); }
 
 .gioco-dropdown-divider {
     height: 1px;
@@ -232,10 +215,7 @@
     line-height: 1.3;
 }
 
-    .gioco-rimescola-btn:active {
-        transform: scale(0.95);
-        filter: brightness(0.9);
-    }
+    .gioco-rimescola-btn:active { transform: scale(0.95); filter: brightness(0.9); }
 
 .gioco-attendi-rimescola {
     font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
@@ -249,6 +229,13 @@
     line-height: 1.4;
 }
 
+/* ── Flip carta ─────────────────────────────────────────────────────────────
+   Tecnica preserve-3d: due facce sovrapposte.
+   Front = back.png (sempre visibile a riposo)
+   Back  = carta reale (ruotata di 180deg, nascosta dal backface-visibility)
+   Quando .flipped viene aggiunto, il flipper ruota di 180deg e mostra la carta.
+   Il browser gestisce tutto in CSS — zero glitch garantiti.
+────────────────────────────────────────────────────────────────────────────── */
 .gioco-carta-btn {
     width: 100%;
     background: none;
@@ -259,46 +246,48 @@
     filter: drop-shadow(8px 8px 6px rgba(0, 0, 0, 0.75));
     transition: filter 160ms ease, transform 160ms ease;
     display: block;
-    overflow: hidden;
+    /* prospettiva per l'effetto 3D */
+    perspective: 1000px;
 }
 
-    .gioco-carta-btn:active {
-        transform: scale(0.97);
-        filter: drop-shadow(4px 4px 4px rgba(0, 0, 0, 0.5));
-    }
+    .gioco-carta-btn:active  { transform: scale(0.97); filter: drop-shadow(4px 4px 4px rgba(0, 0, 0, 0.5)); }
+    .gioco-carta-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    .gioco-carta-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .gioco-carta-btn:focus-visible {
-        outline: 3px solid #fff;
-        outline-offset: 3px;
-    }
-
-    .gioco-carta-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-/* La carta scoperta fa un fade-in veloce — nessun back visibile */
-.gioco-carta-img.revealed {
-    animation: cardReveal 220ms ease forwards;
+.carta-flipper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 43 / 61;
+    transform-style: preserve-3d;
+    transition: transform 500ms ease;
+    border-radius: 12px;
 }
 
-@keyframes cardReveal {
-    from {
-        opacity: 0;
-        transform: scale(0.96);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+.carta-flipper.flipped {
+    transform: rotateY(180deg);
 }
 
 .gioco-carta-img {
     width: 100%;
-    aspect-ratio: 43 / 61;
+    height: 100%;
     object-fit: cover;
     display: block;
     border-radius: 12px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Faccia frontale: back.png, visibile di default */
+.carta-front {
+    position: absolute;
+    inset: 0;
+}
+
+/* Faccia posteriore: carta reale, ruotata di 180deg (invisibile di default) */
+.carta-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
 }
 
 .gioco-player-card {
@@ -429,9 +418,7 @@
     transition: transform 160ms ease;
 }
 
-    .aiuto-close:active {
-        transform: scale(0.92);
-    }
+    .aiuto-close:active { transform: scale(0.92); }
 
 .aiuto-list {
     overflow-y: auto;
@@ -445,14 +432,8 @@
     scrollbar-color: #7e7618 transparent;
 }
 
-    .aiuto-list::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .aiuto-list::-webkit-scrollbar-thumb {
-        background: #7e7618;
-        border-radius: 4px;
-    }
+    .aiuto-list::-webkit-scrollbar       { width: 4px; }
+    .aiuto-list::-webkit-scrollbar-thumb { background: #7e7618; border-radius: 4px; }
 
 .aiuto-item {
     display: flex;
@@ -464,9 +445,7 @@
     padding: 7px 10px;
 }
 
-.aiuto-item--disconnesso {
-    opacity: 0.45;
-}
+.aiuto-item--disconnesso { opacity: 0.45; }
 
 .aiuto-item--attivo {
     background: rgba(34, 146, 148, 0.25);
