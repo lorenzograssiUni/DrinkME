@@ -33,6 +33,9 @@ const REGOLE = [
     { carta: "K", testo: "Il Matto — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
 ];
 
+// Durata animazione flip in ms — deve combaciare con il CSS
+const FLIP_DURATION = 600;
+
 export default function Gioco() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -55,6 +58,10 @@ export default function Gioco() {
     const [deckCount, setDeckCount] = useState(initDeckCount ?? 52);
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
+    // displayedCard: carta mostrata visivamente — viene swappata a metà flip
+    const [displayedCard, setDisplayedCard] = useState(initialCardRevealed && initialCurrentCard ? initialCurrentCard : null);
+    const [isFlipping, setIsFlipping] = useState(false);
+
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
     const [giocatoriAperti, setGiocatori] = useState(false);
@@ -76,6 +83,7 @@ export default function Gioco() {
     const [beviPlayerName, setBeviPlayerName] = useState("");
 
     const menuRef = useRef(null);
+    const flipTimersRef = useRef([]);
 
     const playersRef = useRef(players);
     useEffect(() => { playersRef.current = players; }, [players]);
@@ -85,12 +93,34 @@ export default function Gioco() {
     const giocatoreAttivo = players[currentPlayerIndex];
     const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
 
+    // Avvia l'animazione flip: mostra back -> a metà swappa src -> fine animazione
+    const triggerFlip = (newCard) => {
+        // Cancella eventuali timer precedenti
+        flipTimersRef.current.forEach(clearTimeout);
+        flipTimersRef.current = [];
+
+        setIsFlipping(true);
+        setDisplayedCard(null); // mostra back durante prima metà
+
+        const t1 = setTimeout(() => {
+            setDisplayedCard(newCard); // swappa a metà flip
+        }, FLIP_DURATION / 2);
+
+        const t2 = setTimeout(() => {
+            setIsFlipping(false);
+        }, FLIP_DURATION);
+
+        flipTimersRef.current = [t1, t2];
+    };
+
     useEffect(() => {
         const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi }) => {
             setCurrentCard(card);
             setCardRevealed(true);
             setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
+
+            triggerFlip(card);
 
             const valore = card.split("-")[0];
             const idx = cpi ?? 0;
@@ -104,28 +134,24 @@ export default function Gioco() {
                     setSceltaPlayerName(nome);
                     setSceltaAttivo(true);
                 }
-
                 if (valore === "3") {
                     setBeviPlayerName(nome);
                     setBeviAttivo(true);
                 }
-
                 if (valore === "4") {
                     setVikingPlayerIndex(idx);
                     setVikingPlayerName(nome);
                     setVikingAttivo(true);
                 }
-
                 if (valore === "5") {
                     setMirrorPlayerName(nome);
                     setMirrorAttivo(true);
                 }
-
                 if (valore === "13") {
                     setMattoPlayerName(nome);
                     setMattoAttivo(true);
                 }
-            }, 1000);
+            }, 500);
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
@@ -133,12 +159,17 @@ export default function Gioco() {
             setDeckCount(dc);
             setCardRevealed(false);
             setCurrentCard(null);
+            setDisplayedCard(null);
+            setIsFlipping(false);
+            flipTimersRef.current.forEach(clearTimeout);
         };
 
         const onDeckShuffled = ({ deckCount: dc }) => {
             setDeckCount(dc);
             setCurrentCard(null);
             setCardRevealed(false);
+            setDisplayedCard(null);
+            setIsFlipping(false);
         };
 
         const onPlayersUpdated = (updatedPlayers) => {
@@ -181,6 +212,8 @@ export default function Gioco() {
             setDeckCount(dc);
             setCurrentCard(cc);
             setCardRevealed(cr);
+            setDisplayedCard(cr && cc ? cc : null);
+            setIsFlipping(false);
 
             navigate("/gioco", {
                 replace: true,
@@ -269,6 +302,9 @@ export default function Gioco() {
         navigate("/accesso", { replace: true });
     };
 
+    const imgSrc = displayedCard ? cartaPath(displayedCard) : backPng;
+    const imgAlt = displayedCard ? `Carta ${displayedCard}` : "Carta coperta";
+
     return (
         <main className="gioco-page" aria-label="Schermata di gioco">
             <section className="gioco-screen">
@@ -339,9 +375,9 @@ export default function Gioco() {
 
                     <div className="gioco-card-wrapper">
                         <button
-                            className={`gioco-carta-btn ${cardRevealed ? "scoperta" : ""}`}
+                            className={`gioco-carta-btn${isFlipping ? " flipping" : ""}${cardRevealed && !isFlipping ? " scoperta" : ""}`}
                             onClick={handleClick}
-                            disabled={mazzoEsaurito || !isMyTurn}
+                            disabled={mazzoEsaurito || !isMyTurn || isFlipping}
                             aria-label={
                                 isMyTurn
                                     ? cardRevealed ? "Ricopri" : "Scopri"
@@ -350,8 +386,8 @@ export default function Gioco() {
                             style={{ opacity: !isMyTurn && !cardRevealed ? 0.6 : 1 }}
                         >
                             <img
-                                src={cardRevealed && currentCard ? cartaPath(currentCard) : backPng}
-                                alt={cardRevealed && currentCard ? `Carta ${currentCard}` : "Carta coperta"}
+                                src={imgSrc}
+                                alt={imgAlt}
                                 className="gioco-carta-img"
                             />
                         </button>
