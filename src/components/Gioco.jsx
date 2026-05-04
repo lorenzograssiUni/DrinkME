@@ -19,6 +19,18 @@ function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
 }
 
+const SESSION_KEY = "drinkme_session";
+
+function saveSession(data) {
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(data)); } catch (_) {}
+}
+function loadSession() {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (_) { return null; }
+}
+function clearSession() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
+}
+
 const REGOLE = [
     { carta: "2", testo: "Two is for you — Scegli chi beve." },
     { carta: "3", testo: "Three is for me — Beve chi pesca la carta." },
@@ -38,6 +50,9 @@ export default function Gioco() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Leggi dati da location.state oppure da sessionStorage (reload)
+    const stateData = location.state ?? loadSession();
+
     const {
         roomCode,
         playerIndex,
@@ -48,7 +63,7 @@ export default function Gioco() {
         maxPlayers,
         currentCard: initialCurrentCard,
         cardRevealed: initialCardRevealed,
-    } = location.state ?? {};
+    } = stateData ?? {};
 
     const [players, setPlayers] = useState(initialPlayers ?? []);
     const [isHost, setIsHost] = useState(initialIsHost ?? false);
@@ -56,6 +71,7 @@ export default function Gioco() {
     const [deckCount, setDeckCount] = useState(initDeckCount ?? 52);
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
+    const [rejoining, setRejoining] = useState(false);
 
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
@@ -64,29 +80,71 @@ export default function Gioco() {
     const [vikingAttivo, setVikingAttivo] = useState(false);
     const [vikingPlayerIndex, setVikingPlayerIndex] = useState(null);
     const [vikingPlayerName, setVikingPlayerName] = useState("");
-
     const [mirrorAttivo, setMirrorAttivo] = useState(false);
     const [mirrorPlayerName, setMirrorPlayerName] = useState("");
-
     const [mattoAttivo, setMattoAttivo] = useState(false);
     const [mattoPlayerName, setMattoPlayerName] = useState("");
-
     const [sceltaAttivo, setSceltaAttivo] = useState(false);
     const [sceltaPlayerName, setSceltaPlayerName] = useState("");
-
     const [beviAttivo, setBeviAttivo] = useState(false);
     const [beviPlayerName, setBeviPlayerName] = useState("");
-
     const [donneAttivo, setDonneAttivo] = useState(false);
 
     const menuRef = useRef(null);
     const playersRef = useRef(players);
     useEffect(() => { playersRef.current = players; }, [players]);
 
-    const isMyTurn = playerIndex === currentPlayerIndex;
-    const mazzoEsaurito = deckCount === 0 && !cardRevealed;
-    const giocatoreAttivo = players[currentPlayerIndex];
-    const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
+    // Salva sessione ogni volta che i dati chiave cambiano
+    useEffect(() => {
+        if (!roomCode) return;
+        saveSession({
+            roomCode, playerIndex, isHost, players,
+            currentPlayerIndex, deckCount, maxPlayers,
+            currentCard, cardRevealed,
+        });
+    }, [roomCode, playerIndex, isHost, players, currentPlayerIndex, deckCount, maxPlayers, currentCard, cardRevealed]);
+
+    // Rejoin automatico se il socket non è connesso alla stanza (es. dopo reload)
+    useEffect(() => {
+        if (!roomCode) {
+            navigate("/accesso", { replace: true });
+            return;
+        }
+
+        if (!socket.connected) {
+            socket.connect();
+        }
+
+        // Aspetta connessione poi fai join-room per rientrare come giocatore disconnesso
+        const doRejoin = () => {
+            setRejoining(true);
+            socket.emit("join-room", { code: roomCode }, (res) => {
+                setRejoining(false);
+                if (!res?.ok) {
+                    // Stanza non più disponibile
+                    clearSession();
+                    navigate("/accesso", { replace: true });
+                }
+                // Se ok, game-state-sync arriverà e aggiornerà tutto
+            });
+        };
+
+        // Se il socket non ha ancora il roomCode impostato (dopo reload)
+        // lo capiamo verificando se socket.data è vuoto: il modo più semplice
+        // è emettere join-room ogni volta che manca location.state
+        if (!location.state) {
+            if (socket.connected) {
+                doRejoin();
+            } else {
+                socket.once("connect", doRejoin);
+            }
+        }
+
+        return () => {
+            socket.off("connect", doRejoin);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi }) => {
@@ -99,8 +157,6 @@ export default function Gioco() {
             const idx = cpi ?? 0;
             const chi = playersRef.current.find((p) => p.index === idx);
             const nome = chi?.name || `Giocatore ${idx + 1}`;
-
-            console.log("[card-drawn] valore:", valore, "| idx:", idx, "| nome:", nome);
 
             setTimeout(() => {
                 if (valore === "2") { setSceltaPlayerName(nome); setSceltaAttivo(true); }
@@ -131,6 +187,7 @@ export default function Gioco() {
         };
 
         const onGameRestarted = ({ roomCode: rc, maxPlayers: mp, players: p }) => {
+            clearSession();
             const me = p.find((pl) => pl.index === playerIndex);
             navigate("/attesa", { replace: true, state: { roomCode: rc, playerIndex, maxPlayers: mp ?? maxPlayers, isHost: Boolean(me?.isHost) } });
         };
@@ -176,6 +233,11 @@ export default function Gioco() {
         return () => document.removeEventListener("keydown", handleKey);
     }, [aiutoAperto, giocatoriAperti, menuAperto]);
 
+    const isMyTurn = playerIndex === currentPlayerIndex;
+    const mazzoEsaurito = deckCount === 0 && !cardRevealed;
+    const giocatoreAttivo = players[currentPlayerIndex];
+    const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
+
     const handleClick = () => {
         if (!isMyTurn) return;
         if (!cardRevealed) { if (deckCount === 0) return; socket.emit("draw-card"); }
@@ -184,7 +246,17 @@ export default function Gioco() {
 
     const handleRimescola = () => { if (!isHost) return; socket.emit("shuffle-deck"); };
     const handleRicomincia = () => { if (!isHost) return; setMenuAperto(false); socket.emit("restart-game"); };
-    const handleEsci = () => { setMenuAperto(false); socket.disconnect(); navigate("/accesso", { replace: true }); };
+    const handleEsci = () => { setMenuAperto(false); clearSession(); socket.disconnect(); navigate("/accesso", { replace: true }); };
+
+    if (rejoining) {
+        return (
+            <main className="gioco-page">
+                <section className="gioco-screen" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <p style={{ color: "#fff", fontSize: "1.1rem", opacity: 0.7 }}>Rientro in partita...</p>
+                </section>
+            </main>
+        );
+    }
 
     return (
         <main className="gioco-page" aria-label="Schermata di gioco">
