@@ -33,7 +33,6 @@ const REGOLE = [
     { carta: "K", testo: "Il Matto — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
 ];
 
-// Durata animazione flip in ms — deve combaciare con il CSS
 const FLIP_DURATION = 600;
 
 export default function Gioco() {
@@ -58,7 +57,6 @@ export default function Gioco() {
     const [deckCount, setDeckCount] = useState(initDeckCount ?? 52);
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
-    // displayedCard: carta mostrata visivamente — viene swappata a metà flip
     const [displayedCard, setDisplayedCard] = useState(initialCardRevealed && initialCurrentCard ? initialCurrentCard : null);
     const [isFlipping, setIsFlipping] = useState(false);
 
@@ -93,17 +91,15 @@ export default function Gioco() {
     const giocatoreAttivo = players[currentPlayerIndex];
     const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
 
-    // Avvia l'animazione flip: mostra back -> a metà swappa src -> fine animazione
     const triggerFlip = (newCard) => {
-        // Cancella eventuali timer precedenti
         flipTimersRef.current.forEach(clearTimeout);
         flipTimersRef.current = [];
 
         setIsFlipping(true);
-        setDisplayedCard(null); // mostra back durante prima metà
+        setDisplayedCard(null);
 
         const t1 = setTimeout(() => {
-            setDisplayedCard(newCard); // swappa a metà flip
+            setDisplayedCard(newCard);
         }, FLIP_DURATION / 2);
 
         const t2 = setTimeout(() => {
@@ -151,7 +147,7 @@ export default function Gioco() {
                     setMattoPlayerName(nome);
                     setMattoAttivo(true);
                 }
-            }, 500);
+            }, 250);
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
