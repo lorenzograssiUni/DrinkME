@@ -16,6 +16,7 @@
 
 /* ── Cerchio contenitore ── */
 .donne-circle {
+    position: relative;
     width: 220px;
     height: 220px;
     border-radius: 50%;
@@ -29,13 +30,15 @@
     justify-content: center;
     background: radial-gradient(circle at 40% 35%, #3b0a2a, #1a0015);
     animation: donne-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+    overflow: hidden;
 }
 
 /* ── Calice CSS ── */
 .icon__glass-wine {
     box-sizing: border-box;
     position: relative;
-    --size: 90px;
+    z-index: 2;
+    --size: 58px;
     --border-width: calc(var(--size) / 30);
     --fill: 25%;
     --color: #e879a0;
@@ -122,6 +125,29 @@
         background-size: 390% 50%, 100% calc(var(--fill) * 12);
         background-position: center 0px, center bottom;
     }
+}
+
+/* ── Cuori e stelline ── */
+.donne-cuore {
+    position: absolute;
+    font-size: 18px;
+    animation: cuore-float 2.2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.donne-cuore-1 { top: 20px;  left: 22px;  animation-delay: 0s;    animation-duration: 2.0s; font-size: 20px; }
+.donne-cuore-2 { top: 30px;  right: 25px; animation-delay: 0.4s;  animation-duration: 2.4s; font-size: 14px; }
+.donne-cuore-3 { top: 70px;  left: 14px;  animation-delay: 0.8s;  animation-duration: 2.1s; font-size: 16px; }
+.donne-cuore-4 { top: 65px;  right: 18px; animation-delay: 0.2s;  animation-duration: 2.6s; font-size: 14px; }
+.donne-cuore-5 { bottom: 30px; left: 26px; animation-delay: 1.0s; animation-duration: 1.9s; font-size: 18px; }
+.donne-cuore-6 { bottom: 25px; right: 22px; animation-delay: 0.6s; animation-duration: 2.3s; font-size: 15px; }
+
+@keyframes cuore-float {
+    0%   { opacity: 0;   transform: scale(0.6) translateY(0px); }
+    30%  { opacity: 1;   transform: scale(1.1) translateY(-8px); }
+    70%  { opacity: 0.7; transform: scale(1.0) translateY(-16px); }
+    100% { opacity: 0;   transform: scale(0.8) translateY(-26px); }
 }
 
 /* ── Testi ── */
