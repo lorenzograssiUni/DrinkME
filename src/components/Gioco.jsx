@@ -33,8 +33,6 @@ const REGOLE = [
     { carta: "K", testo: "Il Matto — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
 ];
 
-const FLIP_DURATION = 600;
-
 export default function Gioco() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -57,8 +55,9 @@ export default function Gioco() {
     const [deckCount, setDeckCount] = useState(initDeckCount ?? 52);
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
+    // flipKey: cambia ad ogni flip per forzare il restart dell'animazione CSS
+    const [flipKey, setFlipKey] = useState(0);
     const [displayedCard, setDisplayedCard] = useState(initialCardRevealed && initialCurrentCard ? initialCurrentCard : null);
-    const [isFlipping, setIsFlipping] = useState(false);
 
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
@@ -81,7 +80,6 @@ export default function Gioco() {
     const [beviPlayerName, setBeviPlayerName] = useState("");
 
     const menuRef = useRef(null);
-    const flipTimersRef = useRef([]);
 
     const playersRef = useRef(players);
     useEffect(() => { playersRef.current = players; }, [players]);
@@ -91,24 +89,6 @@ export default function Gioco() {
     const giocatoreAttivo = players[currentPlayerIndex];
     const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
 
-    const triggerFlip = (newCard) => {
-        flipTimersRef.current.forEach(clearTimeout);
-        flipTimersRef.current = [];
-
-        setIsFlipping(true);
-        setDisplayedCard(null);
-
-        const t1 = setTimeout(() => {
-            setDisplayedCard(newCard);
-        }, FLIP_DURATION / 2);
-
-        const t2 = setTimeout(() => {
-            setIsFlipping(false);
-        }, FLIP_DURATION);
-
-        flipTimersRef.current = [t1, t2];
-    };
-
     useEffect(() => {
         const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi }) => {
             setCurrentCard(card);
@@ -116,7 +96,9 @@ export default function Gioco() {
             setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
 
-            triggerFlip(card);
+            // Swappa subito la carta e triggera il fade-in via flipKey
+            setDisplayedCard(card);
+            setFlipKey((k) => k + 1);
 
             const valore = card.split("-")[0];
             const idx = cpi ?? 0;
@@ -156,8 +138,6 @@ export default function Gioco() {
             setCardRevealed(false);
             setCurrentCard(null);
             setDisplayedCard(null);
-            setIsFlipping(false);
-            flipTimersRef.current.forEach(clearTimeout);
         };
 
         const onDeckShuffled = ({ deckCount: dc }) => {
@@ -165,7 +145,6 @@ export default function Gioco() {
             setCurrentCard(null);
             setCardRevealed(false);
             setDisplayedCard(null);
-            setIsFlipping(false);
         };
 
         const onPlayersUpdated = (updatedPlayers) => {
@@ -209,7 +188,6 @@ export default function Gioco() {
             setCurrentCard(cc);
             setCardRevealed(cr);
             setDisplayedCard(cr && cc ? cc : null);
-            setIsFlipping(false);
 
             navigate("/gioco", {
                 replace: true,
@@ -371,9 +349,9 @@ export default function Gioco() {
 
                     <div className="gioco-card-wrapper">
                         <button
-                            className={`gioco-carta-btn${isFlipping ? " flipping" : ""}${cardRevealed && !isFlipping ? " scoperta" : ""}`}
+                            className="gioco-carta-btn"
                             onClick={handleClick}
-                            disabled={mazzoEsaurito || !isMyTurn || isFlipping}
+                            disabled={mazzoEsaurito || !isMyTurn}
                             aria-label={
                                 isMyTurn
                                     ? cardRevealed ? "Ricopri" : "Scopri"
@@ -382,9 +360,10 @@ export default function Gioco() {
                             style={{ opacity: !isMyTurn && !cardRevealed ? 0.6 : 1 }}
                         >
                             <img
+                                key={flipKey}
                                 src={imgSrc}
                                 alt={imgAlt}
-                                className="gioco-carta-img"
+                                className={`gioco-carta-img${displayedCard ? " revealed" : ""}`}
                             />
                         </button>
 
