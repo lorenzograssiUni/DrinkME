@@ -1,5 +1,6 @@
 import "./DonneAnimation.css";
-import womenMp4 from "../assets/images/women.mp4";
+
+const womenMp4 = new URL("../assets/images/women.mp4", import.meta.url).href;
 
 export default function DonneAnimation({ onClose }) {
     return (
