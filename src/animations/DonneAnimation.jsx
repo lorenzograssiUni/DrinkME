@@ -5,12 +5,16 @@ export default function DonneAnimation({ onClose }) {
         <div className="donne-overlay" onClick={onClose}>
             <div className="donne-circle">
                 <div className="icon__glass-wine" />
-                <span className="donne-cuore donne-cuore-1">💖</span>
-                <span className="donne-cuore donne-cuore-2">✨</span>
-                <span className="donne-cuore donne-cuore-3">💕</span>
-                <span className="donne-cuore donne-cuore-4">⭐</span>
-                <span className="donne-cuore donne-cuore-5">💗</span>
-                <span className="donne-cuore donne-cuore-6">✨</span>
+                <span className="donne-cuore c1">💖</span>
+                <span className="donne-cuore c2">✨</span>
+                <span className="donne-cuore c3">💕</span>
+                <span className="donne-cuore c4">⭐</span>
+                <span className="donne-cuore c5">💗</span>
+                <span className="donne-cuore c6">✨</span>
+                <span className="donne-cuore c7">💞</span>
+                <span className="donne-cuore c8">🌸</span>
+                <span className="donne-cuore c9">💫</span>
+                <span className="donne-cuore c10">💝</span>
             </div>
 
             <p className="donne-titolo">BEVONO LE DONNE!</p>
