@@ -314,7 +314,15 @@ export default function Gioco() {
                     />
                 )}
                 {vikingAttivo  && <VikingAnimation  giocatore={vikingPlayerName}  onClose={() => setVikingAttivo(false)} />}
-                {mirrorAttivo  && <MirrorAnimation  giocatore={mirrorPlayerName}  onClose={() => setMirrorAttivo(false)} />}
+                {mirrorAttivo  && (
+                    <MirrorAnimation
+                        giocatore={mirrorPlayerName}
+                        players={players}
+                        playerIndex={playerIndex}
+                        isChooser={playerIndex === currentPlayerIndex}
+                        onClose={() => setMirrorAttivo(false)}
+                    />
+                )}
                 {mattoAttivo   && <MattoAnimation   giocatore={mattoPlayerName}   onClose={() => setMattoAttivo(false)} />}
             </section>
 
