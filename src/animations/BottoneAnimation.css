@@ -1,0 +1,179 @@
+.bottone-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: rgba(10, 5, 5, 0.90);
+    animation: bottone-fadein 0.4s ease;
+}
+
+.bottone-circle {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 5px solid #ef4444;
+    box-shadow:
+        0 0 0 4px #7f1d1d,
+        0 0 30px rgba(239, 68, 68, 0.7),
+        0 0 60px rgba(239, 68, 68, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 40% 35%, #2a0a0a, #100005);
+    animation: bottone-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+    overflow: hidden;
+}
+
+/* Bottone rosso */
+.bottone-btn {
+    position: relative;
+    z-index: 3;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: #fff;
+    background: radial-gradient(circle at 35% 30%, #ff6b6b, #dc2626 60%, #7f1d1d);
+    box-shadow:
+        0 8px 0 #7f1d1d,
+        0 10px 20px rgba(0,0,0,0.5),
+        inset 0 2px 6px rgba(255,255,255,0.3);
+    transition: transform 0.1s, box-shadow 0.1s;
+    animation: btn-pulse 1.5s ease-in-out infinite;
+}
+
+.bottone-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow:
+        0 11px 0 #7f1d1d,
+        0 14px 24px rgba(0,0,0,0.5),
+        inset 0 2px 6px rgba(255,255,255,0.3);
+}
+
+.bottone-btn.pressing,
+.bottone-btn:active:not(:disabled) {
+    transform: translateY(6px);
+    box-shadow:
+        0 2px 0 #7f1d1d,
+        0 4px 10px rgba(0,0,0,0.5),
+        inset 0 2px 6px rgba(255,255,255,0.1);
+}
+
+.bottone-btn.pressed {
+    background: radial-gradient(circle at 35% 30%, #4ade80, #16a34a 60%, #14532d);
+    box-shadow:
+        0 8px 0 #14532d,
+        0 10px 20px rgba(0,0,0,0.5),
+        inset 0 2px 6px rgba(255,255,255,0.3);
+    cursor: default;
+    animation: none;
+    font-size: 2rem;
+}
+
+@keyframes btn-pulse {
+    0%, 100% { box-shadow: 0 8px 0 #7f1d1d, 0 10px 20px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.3), 0 0 0 0 rgba(239,68,68,0); }
+    50%       { box-shadow: 0 8px 0 #7f1d1d, 0 10px 20px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.3), 0 0 0 14px rgba(239,68,68,0); }
+}
+
+/* Risultato */
+.bottone-result {
+    position: relative;
+    z-index: 3;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: result-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.bottone-result-emoji { font-size: 56px; }
+
+.bottone-result.loser  { background: radial-gradient(circle, #7f1d1d, #2a0a0a); }
+.bottone-result.winner { background: radial-gradient(circle, #14532d, #052e16); }
+
+@keyframes result-pop {
+    from { opacity: 0; transform: scale(0.2); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* Emoji sfondo */
+.bottone-bg {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+    line-height: 1;
+    animation: bottone-float var(--dur, 2s) ease-in-out var(--delay, 0s) infinite;
+}
+.b1  { top: 10px;    left: 12px;  font-size: 22px; --dur: 2.1s; --delay: 0.0s; }
+.b2  { top: 6px;     left: 80px;  font-size: 18px; --dur: 1.9s; --delay: 0.4s; }
+.b3  { top: 10px;    right: 14px; font-size: 20px; --dur: 2.4s; --delay: 0.2s; }
+.b4  { top: 65px;    left: 6px;   font-size: 18px; --dur: 2.0s; --delay: 0.7s; }
+.b5  { top: 65px;    right: 8px;  font-size: 22px; --dur: 2.3s; --delay: 0.3s; }
+.b6  { bottom: 65px; left: 8px;   font-size: 18px; --dur: 2.1s; --delay: 1.0s; }
+.b7  { bottom: 65px; right: 10px; font-size: 20px; --dur: 1.8s; --delay: 0.6s; }
+.b8  { bottom: 10px; left: 14px;  font-size: 22px; --dur: 2.5s; --delay: 0.4s; }
+.b9  { bottom: 6px;  left: 80px;  font-size: 18px; --dur: 2.0s; --delay: 1.2s; }
+.b10 { bottom: 10px; right: 12px; font-size: 20px; --dur: 2.2s; --delay: 0.8s; }
+.b11 { top: 36px;    left: 28px;  font-size: 18px; --dur: 2.6s; --delay: 0.9s; }
+.b12 { top: 36px;    right: 26px; font-size: 18px; --dur: 1.7s; --delay: 0.1s; }
+
+@keyframes bottone-float {
+    0%   { opacity: 0;    transform: scale(0.6) translateY(0); }
+    25%  { opacity: 0.7;  transform: scale(1.1) translateY(-6px); }
+    70%  { opacity: 0.45; transform: scale(1.0) translateY(-14px); }
+    100% { opacity: 0;    transform: scale(0.8) translateY(-22px); }
+}
+
+/* Testi */
+.bottone-titolo {
+    color: #ffffff;
+    font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
+    font-size: clamp(1.2rem, 6vw, 1.7rem);
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 0.1em;
+    text-shadow: 0 2px 12px rgba(239,68,68,0.9), 0 0 30px rgba(239,68,68,0.5);
+    padding: 0 1.4rem;
+    animation: appear 0.6s ease 0.8s both;
+}
+
+.bottone-sottotitolo {
+    color: rgba(255, 180, 180, 0.85);
+    font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: center;
+    padding: 0 1.4rem;
+    animation: appear 0.6s ease 1.0s both;
+}
+
+.bottone-hint {
+    position: absolute;
+    bottom: 20px;
+    color: rgba(255,255,255,0.35);
+    font-family: "PaulGrotesk", "Barlow", Arial, sans-serif;
+    font-size: 0.75rem;
+    animation: appear 0.6s ease 1.8s both;
+}
+
+@keyframes bottone-fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bottone-pop {
+    from { opacity: 0; transform: scale(0.2); }
+    to   { opacity: 1; transform: scale(1); }
+}
+@keyframes appear {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

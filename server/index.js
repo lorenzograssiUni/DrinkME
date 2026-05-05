@@ -81,6 +81,7 @@ io.on("connection", (socket) => {
             currentCard: null,
             cardRevealed: false,
             currentPlayerIndex: 0,
+            buttonGame: null,
         };
 
         rooms.set(code, room);
@@ -205,6 +206,7 @@ io.on("connection", (socket) => {
         room.deck = creaMazzo();
         room.currentCard = null;
         room.cardRevealed = false;
+        room.buttonGame = null;
 
         const firstConnected = room.players.find((p) => p.connected);
         room.currentPlayerIndex = firstConnected ? firstConnected.index : 0;
@@ -240,11 +242,53 @@ io.on("connection", (socket) => {
         room.currentCard = card;
         room.cardRevealed = true;
 
+        // Se è un 7, inizializza il button game
+        const valore = card.split("-")[0];
+        if (valore === "7") {
+            const connectedPlayers = room.players.filter((p) => p.connected);
+            room.buttonGame = {
+                pressed: [],   // array di playerIndex in ordine di pressione
+                total: connectedPlayers.length,
+            };
+        }
+
         io.to(room.code).emit("card-drawn", {
             card,
             deckCount: room.deck.length,
             currentPlayerIndex: room.currentPlayerIndex,
         });
+
+        cb?.({ ok: true });
+    });
+
+    // Evento premere il bottone per la carta 7
+    socket.on("press-button", (cb) => {
+        const room = rooms.get(socket.data.roomCode);
+        if (!room || !room.buttonGame) return cb?.({ ok: false });
+
+        const playerIndex = socket.data.playerIndex;
+        if (room.buttonGame.pressed.includes(playerIndex)) {
+            return cb?.({ ok: false, error: "Già premuto" });
+        }
+
+        room.buttonGame.pressed.push(playerIndex);
+
+        // Notifica tutti di quanti hanno premuto
+        io.to(room.code).emit("button-pressed", {
+            playerIndex,
+            pressedCount: room.buttonGame.pressed.length,
+            total: room.buttonGame.total,
+        });
+
+        // Se tutti hanno premuto, l'ultimo è il perdente
+        if (room.buttonGame.pressed.length >= room.buttonGame.total) {
+            const loserIndex = playerIndex; // l'ultimo ad aver premuto
+            const loserPlayer = room.players.find((p) => p.index === loserIndex);
+            const loserName = loserPlayer?.name || `Giocatore ${loserIndex + 1}`;
+
+            io.to(room.code).emit("button-loser", { loserIndex, loserName });
+            room.buttonGame = null;
+        }
 
         cb?.({ ok: true });
     });
@@ -260,6 +304,9 @@ io.on("connection", (socket) => {
         if (!room.cardRevealed) {
             return cb?.({ ok: false, error: "Nessuna carta da girare" });
         }
+
+        // Reset button game se ancora attivo
+        room.buttonGame = null;
 
         const connectedPlayers = room.players.filter((p) => p.connected);
         if (connectedPlayers.length === 0) {
@@ -288,6 +335,7 @@ io.on("connection", (socket) => {
         room.deck = creaMazzo();
         room.currentCard = null;
         room.cardRevealed = false;
+        room.buttonGame = null;
 
         io.to(room.code).emit("deck-shuffled", {
             deckCount: room.deck.length,
@@ -309,6 +357,7 @@ io.on("connection", (socket) => {
         room.currentCard = null;
         room.cardRevealed = false;
         room.currentPlayerIndex = 0;
+        room.buttonGame = null;
 
         io.to(room.code).emit("game-restarted", {
             roomCode: room.code,
@@ -330,6 +379,19 @@ io.on("connection", (socket) => {
         if (!player) return;
 
         player.connected = false;
+
+        // Se il buttonGame è attivo e il giocatore non aveva ancora premuto, riduci il totale
+        if (room.buttonGame && !room.buttonGame.pressed.includes(player.index)) {
+            room.buttonGame.total = Math.max(1, room.buttonGame.total - 1);
+            // Ricontrolla se ora tutti hanno premuto
+            if (room.buttonGame.pressed.length >= room.buttonGame.total) {
+                const lastPressedIndex = room.buttonGame.pressed[room.buttonGame.pressed.length - 1];
+                const loserPlayer = room.players.find((p) => p.index === lastPressedIndex);
+                const loserName = loserPlayer?.name || `Giocatore ${lastPressedIndex + 1}`;
+                io.to(room.code).emit("button-loser", { loserIndex: lastPressedIndex, loserName });
+                room.buttonGame = null;
+            }
+        }
 
         const hostWasDisconnected = room.hostSocketId === socket.id;
 

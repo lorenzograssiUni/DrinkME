@@ -15,6 +15,7 @@ import SceltaAnimation from "../animations/SceltaAnimation";
 import BeviAnimation from "../animations/BeviAnimation";
 import DonneAnimation from "../animations/DonneAnimation";
 import UominiAnimation from "../animations/UominiAnimation";
+import BottoneAnimation from "../animations/BottoneAnimation";
 
 function cartaPath(nome) {
     return new URL(`../assets/images/cards/${nome}.png`, import.meta.url).href;
@@ -76,6 +77,7 @@ export default function Gioco() {
     const [beviPlayerName, setBeviPlayerName] = useState("");
     const [donneAttivo, setDonneAttivo] = useState(false);
     const [uominiAttivo, setUominiAttivo] = useState(false);
+    const [bottoneAttivo, setBottoneAttivo] = useState(false);
 
     const menuRef = useRef(null);
     const playersRef = useRef(players);
@@ -118,6 +120,7 @@ export default function Gioco() {
                 if (valore === "4")  { setVikingPlayerIndex(idx); setVikingPlayerName(nome); setVikingAttivo(true); }
                 if (valore === "5")  { setMirrorPlayerName(nome); setMirrorAttivo(true); }
                 if (valore === "6")  { setUominiAttivo(true); }
+                if (valore === "7")  { setBottoneAttivo(true); }
                 if (valore === "12") { setDonneAttivo(true); }
                 if (valore === "13") { setMattoPlayerName(nome);  setMattoAttivo(true); }
             }, 250);
@@ -253,6 +256,7 @@ export default function Gioco() {
                 {beviAttivo    && <BeviAnimation    giocatore={beviPlayerName}    onClose={() => setBeviAttivo(false)} />}
                 {donneAttivo   && <DonneAnimation   onClose={() => setDonneAttivo(false)} />}
                 {uominiAttivo  && <UominiAnimation  onClose={() => setUominiAttivo(false)} />}
+                {bottoneAttivo && <BottoneAnimation players={players} playerIndex={playerIndex} onClose={() => setBottoneAttivo(false)} />}
                 {vikingAttivo  && <VikingAnimation  giocatore={vikingPlayerName}  onClose={() => setVikingAttivo(false)} />}
                 {mirrorAttivo  && <MirrorAnimation  giocatore={mirrorPlayerName}  onClose={() => setMirrorAttivo(false)} />}
                 {mattoAttivo   && <MattoAnimation   giocatore={mattoPlayerName}   onClose={() => setMattoAttivo(false)} />}
