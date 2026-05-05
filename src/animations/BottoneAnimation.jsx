@@ -8,6 +8,7 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
     const [total, setTotal] = useState("?");
     const [pressedIndices, setPressedIndices] = useState([]);
     const [loser, setLoser] = useState(null); // { loserIndex, loserName }
+    const [showRanking, setShowRanking] = useState(false);
     const timerRef = useRef(null);
 
     // Avvia il timer locale al mount — nessuna dipendenza da socket per l'attivazione
@@ -39,6 +40,7 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
     const handlePress = () => {
         if (fase !== "attivo") return;
         setFase("premuto");
+        setShowRanking(false);
         socket.emit("press-button", (res) => {
             if (!res?.ok) setFase("attivo"); // rollback se errore server
         });
@@ -101,6 +103,41 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
                             </li>
                         ))}
                     </ol>
+
+                    {pressedPlayers.length > 0 && (
+                        <button
+                            className="bottone-ranking-btn"
+                            type="button"
+                            onClick={() => setShowRanking(true)}
+                        >
+                            Vedi ordine dei click
+                        </button>
+                    )}
+
+                    {showRanking && (
+                        <div className="bottone-ranking">
+                            <p className="bottone-sottotitolo">Ordine dal più veloce al più lento:</p>
+                            <ol className="aiuto-list">
+                                {pressedPlayers.map((p, i) => (
+                                    <li
+                                        key={p.index}
+                                        className={[
+                                            "aiuto-item",
+                                            p.index === playerIndex ? "aiuto-item--attivo" : "",
+                                        ]
+                                            .join(" ")
+                                            .trim()}
+                                    >
+                                        <span className="aiuto-carta">{i + 1}</span>
+                                        <span className="aiuto-testo">
+                                            {p.name || `Giocatore ${p.index + 1}`}
+                                            {p.index === playerIndex ? " (tu)" : ""}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    )}
                 </>
             ) : (
                 <>
