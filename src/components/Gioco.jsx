@@ -113,6 +113,29 @@ export default function Gioco() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Attiva l'animazione giusta in base al valore della carta
+    const triggerAnimazione = (card, cpi, buttonDelay) => {
+        const valore = card.split("-")[0];
+        const chi = playersRef.current.find((p) => p.index === cpi);
+        const nome = chi?.name || `Giocatore ${cpi + 1}`;
+
+        if (valore === "7") {
+            const delay = buttonDelay ?? (Math.floor(Math.random() * 9000) + 1000);
+            setBottoneDelay(delay);
+            setBottoneAttivo(true);
+            return;
+        }
+        setTimeout(() => {
+            if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
+            if (valore === "3")  { setBeviPlayerName(nome);   setBeviAttivo(true); }
+            if (valore === "4")  { setVikingPlayerIndex(cpi); setVikingPlayerName(nome); setVikingAttivo(true); }
+            if (valore === "5")  { setMirrorPlayerName(nome); setMirrorAttivo(true); }
+            if (valore === "6")  { setUominiAttivo(true); }
+            if (valore === "12") { setDonneAttivo(true); }
+            if (valore === "13") { setMattoPlayerName(nome);  setMattoAttivo(true); }
+        }, 250);
+    };
+
     useEffect(() => {
         const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi, buttonDelay }) => {
             setCurrentCard(card);
@@ -162,29 +185,6 @@ export default function Gioco() {
         return () => document.removeEventListener("keydown", handleKey);
     }, [aiutoAperto, giocatoriAperti, menuAperto]);
 
-    // Attiva l'animazione giusta in base al valore della carta
-    const triggerAnimazione = (card, cpi, buttonDelay) => {
-        const valore = card.split("-")[0];
-        const chi = playersRef.current.find((p) => p.index === cpi);
-        const nome = chi?.name || `Giocatore ${cpi + 1}`;
-
-        if (valore === "7") {
-            const delay = buttonDelay ?? (Math.floor(Math.random() * 9000) + 1000);
-            setBottoneDelay(delay);
-            setBottoneAttivo(true);
-            return;
-        }
-        setTimeout(() => {
-            if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
-            if (valore === "3")  { setBeviPlayerName(nome);   setBeviAttivo(true); }
-            if (valore === "4")  { setVikingPlayerIndex(cpi); setVikingPlayerName(nome); setVikingAttivo(true); }
-            if (valore === "5")  { setMirrorPlayerName(nome); setMirrorAttivo(true); }
-            if (valore === "6")  { setUominiAttivo(true); }
-            if (valore === "12") { setDonneAttivo(true); }
-            if (valore === "13") { setMattoPlayerName(nome);  setMattoAttivo(true); }
-        }, 250);
-    };
-
     const isMyTurn = playerIndex === currentPlayerIndex;
     const mazzoEsaurito = deckCount === 0 && !cardRevealed;
     const giocatoreAttivo = players.find(p => p.index === currentPlayerIndex);
@@ -200,12 +200,23 @@ export default function Gioco() {
     const handleRicomincia = () => { if (!isHost) return; setMenuAperto(false); socket.emit("restart-game"); };
     const handleEsci = () => { setMenuAperto(false); clearSession(); socket.disconnect(); navigate("/accesso", { replace: true }); };
 
-    // DEV MODE: 100% client-side, niente socket
+    // DEV MODE: lato client per tutte le carte tranne il 7, che passa dal server per gestire il mini-gioco
     const handleForzaCarta = (carta) => {
         if (!puoForzare) return;
         const val = REGOLA_TO_VALORE[carta];
         if (!val) return;
-        const card = `${val}-P`; // sempre picche
+
+        if (carta === "7") {
+            socket.emit("force-card", { valore: carta }, (res) => {
+                if (res?.ok) {
+                    setAiuto(false);
+                    // La carta e il mini-gioco arrivano via "card-drawn" dal server
+                }
+            });
+            return;
+        }
+
+        const card = `${val}-P`; // sempre picche per test
         setCurrentCard(card);
         setCardRevealed(true);
         setAiuto(false);
