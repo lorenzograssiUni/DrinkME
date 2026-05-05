@@ -46,8 +46,7 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
 
     const pressedPlayers = pressedIndices
         .map((idx) => players.find((p) => p.index === idx))
-        .filter(Boolean)
-        .map((p) => p.name || `Giocatore ${p.index + 1}`);
+        .filter(Boolean);
 
     // ---- RENDER ----
     if (fase === "fine" && loser) {
@@ -74,7 +73,7 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
                 {fase === "attesa"
                     ? "PREMI IL BOTTONE QUANDO È ATTIVO!"
                     : isPremuto
-                        ? "Hai premuto! Attendi gli altri..."
+                        ? "HAI PREMUTO"
                         : "PREMI IL BOTTONE!"}
             </p>
 
@@ -83,22 +82,25 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
                     <p className="bottone-sottotitolo">
                         {pressedCount}/{total} hanno già premuto:
                     </p>
-                    <table className="bottone-tabella">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Giocatore</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pressedPlayers.map((name, i) => (
-                                <tr key={i}>
-                                    <td>{i + 1}</td>
-                                    <td>{name}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <ol className="aiuto-list">
+                        {pressedPlayers.map((p) => (
+                            <li
+                                key={p.index}
+                                className={[
+                                    "aiuto-item",
+                                    p.index === playerIndex ? "aiuto-item--attivo" : "",
+                                ]
+                                    .join(" ")
+                                    .trim()}
+                            >
+                                <span className="aiuto-carta">{p.index + 1}</span>
+                                <span className="aiuto-testo">
+                                    {p.name || `Giocatore ${p.index + 1}`}
+                                    {p.index === playerIndex ? " (tu)" : ""}
+                                </span>
+                            </li>
+                        ))}
+                    </ol>
                 </>
             ) : (
                 <>
