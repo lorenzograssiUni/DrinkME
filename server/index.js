@@ -9,294 +9,183 @@ app.get("/health", (_, res) => res.json({ ok: true }));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-    cors: {
-        origin: process.env.CLIENT_URL || "*",
-        methods: ["GET", "POST"],
-    },
+    cors: { origin: process.env.CLIENT_URL || "*", methods: ["GET", "POST"] },
 });
 
 const rooms = new Map();
-
 const SEMI = ["F", "P", "C", "Q"];
-const VALORI = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-
-const REGOLA_TO_VALORE = {
-    "2": "2", "3": "3", "4": "4", "5": "5", "6": "6",
-    "7": "7", "8": "8", "9": "9", "10": "10",
-    "J": "11", "Q": "12", "K": "13",
-};
+const VALORI = [1,2,3,4,5,6,7,8,9,10,11,12,13];
+const REGOLA_TO_VALORE = { "2":"2","3":"3","4":"4","5":"5","6":"6","7":"7","8":"8","9":"9","10":"10","J":"11","Q":"12","K":"13" };
 
 function creaMazzo() {
-    const deck = SEMI.flatMap((s) => VALORI.map((v) => `${v}-${s}`));
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
+    const deck = SEMI.flatMap(s => VALORI.map(v => `${v}-${s}`));
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
     return deck;
 }
-
-function generaCodice() {
-    return String(Math.floor(10000 + Math.random() * 90000));
+function generaCodice() { return String(Math.floor(10000+Math.random()*90000)); }
+function safe(players, hostId) { return players.map(p => ({...p, isHost: p.socketId===hostId && p.connected})); }
+function nextHost(room) { return room.players.find(p => p.connected); }
+function nextIdx(room, from) {
+    for (let i=1; i<=room.players.length; i++) { const n=(from+i)%room.players.length; if(room.players[n]?.connected) return n; }
+    return from;
 }
 
-function getSafePlayers(players, hostSocketId) {
-    return players.map((p) => ({ ...p, isHost: p.socketId === hostSocketId && p.connected }));
-}
-
-function getNextHost(room) {
-    return room.players.find((p) => p.connected);
-}
-
-function getNextConnectedPlayerIndex(room, startIndex) {
-    for (let i = 1; i <= room.players.length; i++) {
-        const nextIndex = (startIndex + i) % room.players.length;
-        if (room.players[nextIndex]?.connected) return nextIndex;
-    }
-    return startIndex;
-}
-
-io.on("connection", (socket) => {
+io.on("connection", socket => {
     console.log("connect:", socket.id);
 
-    socket.on("create-room", ({ numPlayers }, cb) => {
-        let code;
-        do { code = generaCodice(); } while (rooms.has(code));
-        const room = {
-            code, hostSocketId: socket.id, maxPlayers: numPlayers, status: "waiting",
-            players: [{ socketId: socket.id, index: 0, name: "", gender: "female", connected: true }],
-            deck: [], currentCard: null, cardRevealed: false, currentPlayerIndex: 0, buttonGame: null,
-        };
-        rooms.set(code, room);
-        socket.join(code);
-        socket.data.roomCode = code;
-        socket.data.playerIndex = 0;
-        socket.emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
-        cb?.({ ok: true, code, playerIndex: 0, maxPlayers: numPlayers, isHost: true, rejoined: false, inGame: false });
+    socket.on("create-room", ({numPlayers}, cb) => {
+        let code; do { code=generaCodice(); } while(rooms.has(code));
+        const room = { code, hostSocketId:socket.id, maxPlayers:numPlayers, status:"waiting",
+            players:[{socketId:socket.id,index:0,name:"",gender:"female",connected:true}],
+            deck:[], currentCard:null, cardRevealed:false, currentPlayerIndex:0, buttonGame:null };
+        rooms.set(code, room); socket.join(code); socket.data.roomCode=code; socket.data.playerIndex=0;
+        socket.emit("players-updated", safe(room.players, room.hostSocketId));
+        cb?.({ok:true,code,playerIndex:0,maxPlayers:numPlayers,isHost:true,rejoined:false,inGame:false});
     });
 
-    socket.on("join-room", ({ code }, cb) => {
+    socket.on("join-room", ({code}, cb) => {
         const room = rooms.get(code);
-        if (!room) return cb?.({ ok: false, error: "Stanza non trovata" });
-        const disconnectedPlayer = room.players.find((p) => !p.connected);
-        const connectedPlayers = room.players.filter((p) => p.connected);
-        if (!disconnectedPlayer && connectedPlayers.length >= room.maxPlayers)
-            return cb?.({ ok: false, error: "Stanza piena" });
-        if (disconnectedPlayer) {
-            disconnectedPlayer.socketId = socket.id;
-            disconnectedPlayer.connected = true;
-            socket.join(code);
-            socket.data.roomCode = code;
-            socket.data.playerIndex = disconnectedPlayer.index;
-            io.to(code).emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
-            if (room.status === "playing") {
-                socket.emit("game-state-sync", {
-                    roomCode: room.code, playerIndex: disconnectedPlayer.index, maxPlayers: room.maxPlayers,
-                    isHost: room.hostSocketId === socket.id,
-                    players: getSafePlayers(room.players, room.hostSocketId),
-                    currentPlayerIndex: room.currentPlayerIndex, deckCount: room.deck.length,
-                    currentCard: room.currentCard, cardRevealed: room.cardRevealed,
-                });
-            }
-            return cb?.({
-                ok: true, playerIndex: disconnectedPlayer.index, maxPlayers: room.maxPlayers,
-                isHost: room.hostSocketId === socket.id, rejoined: true, inGame: room.status === "playing",
-            });
+        if (!room) return cb?.({ok:false,error:"Stanza non trovata"});
+        const disc = room.players.find(p => !p.connected);
+        const conn = room.players.filter(p => p.connected);
+        if (!disc && conn.length >= room.maxPlayers) return cb?.({ok:false,error:"Stanza piena"});
+        if (disc) {
+            disc.socketId=socket.id; disc.connected=true;
+            socket.join(code); socket.data.roomCode=code; socket.data.playerIndex=disc.index;
+            io.to(code).emit("players-updated", safe(room.players, room.hostSocketId));
+            if (room.status==="playing") socket.emit("game-state-sync", {
+                roomCode:room.code, playerIndex:disc.index, maxPlayers:room.maxPlayers,
+                isHost:room.hostSocketId===socket.id, players:safe(room.players,room.hostSocketId),
+                currentPlayerIndex:room.currentPlayerIndex, deckCount:room.deck.length,
+                currentCard:room.currentCard, cardRevealed:room.cardRevealed });
+            return cb?.({ok:true,playerIndex:disc.index,maxPlayers:room.maxPlayers,isHost:room.hostSocketId===socket.id,rejoined:true,inGame:room.status==="playing"});
         }
-        if (room.status !== "waiting") return cb?.({ ok: false, error: "Partita già iniziata" });
+        if (room.status!=="waiting") return cb?.({ok:false,error:"Partita già iniziata"});
         const index = room.players.length;
-        room.players.push({ socketId: socket.id, index, name: "", gender: index % 2 === 0 ? "female" : "male", connected: true });
-        socket.join(code);
-        socket.data.roomCode = code;
-        socket.data.playerIndex = index;
-        io.to(code).emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
-        cb?.({ ok: true, playerIndex: index, maxPlayers: room.maxPlayers, isHost: false, rejoined: false, inGame: false });
+        room.players.push({socketId:socket.id,index,name:"",gender:index%2===0?"female":"male",connected:true});
+        socket.join(code); socket.data.roomCode=code; socket.data.playerIndex=index;
+        io.to(code).emit("players-updated", safe(room.players, room.hostSocketId));
+        cb?.({ok:true,playerIndex:index,maxPlayers:room.maxPlayers,isHost:false,rejoined:false,inGame:false});
     });
 
-    socket.on("get-players", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        cb?.(room ? getSafePlayers(room.players, room.hostSocketId) : null);
+    socket.on("get-players", cb => { const r=rooms.get(socket.data.roomCode); cb?.(r?safe(r.players,r.hostSocketId):null); });
+
+    socket.on("update-player", ({name,gender},cb) => {
+        const room=rooms.get(socket.data.roomCode); if(!room) return cb?.({ok:false});
+        const p=room.players.find(p=>p.socketId===socket.id); if(!p) return cb?.({ok:false});
+        if(name!==undefined) p.name=name; if(gender!==undefined) p.gender=gender;
+        io.to(room.code).emit("players-updated",safe(room.players,room.hostSocketId)); cb?.({ok:true});
     });
 
-    socket.on("update-player", ({ name, gender }, cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room) return cb?.({ ok: false });
-        const player = room.players.find((p) => p.socketId === socket.id);
-        if (!player) return cb?.({ ok: false });
-        if (name !== undefined) player.name = name;
-        if (gender !== undefined) player.gender = gender;
-        io.to(room.code).emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
-        cb?.({ ok: true });
+    socket.on("start-game", cb => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room) return cb?.({ok:false,error:"Stanza non trovata"});
+        if(room.hostSocketId!==socket.id) return cb?.({ok:false,error:"Solo l'host può avviare"});
+        room.status="playing"; room.deck=creaMazzo(); room.currentCard=null; room.cardRevealed=false; room.buttonGame=null;
+        const first=room.players.find(p=>p.connected); room.currentPlayerIndex=first?first.index:0;
+        io.to(room.code).emit("game-started",{deck:room.deck,players:safe(room.players,room.hostSocketId),currentPlayerIndex:room.currentPlayerIndex,hostSocketId:room.hostSocketId});
+        cb?.({ok:true});
     });
 
-    socket.on("start-game", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room) return cb?.({ ok: false, error: "Stanza non trovata" });
-        if (room.hostSocketId !== socket.id) return cb?.({ ok: false, error: "Solo l'host può avviare" });
-        room.status = "playing";
-        room.deck = creaMazzo();
-        room.currentCard = null;
-        room.cardRevealed = false;
-        room.buttonGame = null;
-        const firstConnected = room.players.find((p) => p.connected);
-        room.currentPlayerIndex = firstConnected ? firstConnected.index : 0;
-        io.to(room.code).emit("game-started", {
-            deck: room.deck, players: getSafePlayers(room.players, room.hostSocketId),
-            currentPlayerIndex: room.currentPlayerIndex, hostSocketId: room.hostSocketId,
-        });
-        cb?.({ ok: true });
+    socket.on("force-card", ({valore},cb) => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room||room.status!=="playing"||room.cardRevealed) return cb?.({ok:false});
+        const val=REGOLA_TO_VALORE[valore]??valore;
+        const idx=room.deck.findIndex(c=>c.startsWith(`${val}-`));
+        if(idx===-1) return cb?.({ok:false,error:"Carta non trovata"});
+        const [carta]=room.deck.splice(idx,1); room.deck.unshift(carta);
+        cb?.({ok:true,carta});
     });
 
-    socket.on("force-card", ({ valore }, cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room || room.status !== "playing") return cb?.({ ok: false });
-        if (room.cardRevealed) return cb?.({ ok: false, error: "Carta già scoperta" });
-        const valoreNumerico = REGOLA_TO_VALORE[valore] ?? valore;
-        const idx = room.deck.findIndex((c) => c.startsWith(`${valoreNumerico}-`));
-        if (idx === -1) return cb?.({ ok: false, error: "Carta non trovata nel mazzo" });
-        const [carta] = room.deck.splice(idx, 1);
-        room.deck.unshift(carta);
-        cb?.({ ok: true, carta });
-    });
+    socket.on("draw-card", cb => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room||room.status!=="playing") return cb?.({ok:false,error:"Partita non attiva"});
+        if(socket.data.playerIndex!==room.currentPlayerIndex) return cb?.({ok:false,error:"Non è il tuo turno"});
+        if(room.cardRevealed) return cb?.({ok:false,error:"Carta già pescata"});
+        if(room.deck.length===0) return cb?.({ok:false,error:"Mazzo esaurito"});
 
-    socket.on("draw-card", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room || room.status !== "playing") return cb?.({ ok: false, error: "Partita non attiva" });
-        if (socket.data.playerIndex !== room.currentPlayerIndex) return cb?.({ ok: false, error: "Non è il tuo turno" });
-        if (room.cardRevealed) return cb?.({ ok: false, error: "Carta già pescata" });
-        if (room.deck.length === 0) return cb?.({ ok: false, error: "Mazzo esaurito" });
+        const card=room.deck.shift();
+        room.currentCard=card;
+        room.cardRevealed=true;
 
-        const card = room.deck.shift();
-        room.currentCard = card;
-        room.cardRevealed = true;
-
-        const valore = card.split("-")[0];
-        let buttonDelay = null;
-
-        if (valore === "7") {
-            const connectedPlayers = room.players.filter((p) => p.connected);
-            buttonDelay = Math.floor(Math.random() * 9000) + 1000;
-            room.buttonGame = {
-                pressed: [],
-                total: connectedPlayers.length,
-                delay: buttonDelay,
-            };
+        let buttonDelay=null;
+        if(card.startsWith("7-")) {
+            const total=room.players.filter(p=>p.connected).length;
+            buttonDelay=Math.floor(Math.random()*9000)+1000; // 1-10 secondi
+            room.buttonGame={pressed:[],total,started:Date.now(),delay:buttonDelay};
         }
 
-        io.to(room.code).emit("card-drawn", {
-            card,
-            deckCount: room.deck.length,
-            currentPlayerIndex: room.currentPlayerIndex,
-            buttonDelay,
-        });
-
-        cb?.({ ok: true });
+        io.to(room.code).emit("card-drawn",{card,deckCount:room.deck.length,currentPlayerIndex:room.currentPlayerIndex,buttonDelay});
+        cb?.({ok:true});
     });
 
-    // Restituisce il totale giocatori del buttonGame attivo (usato dal client dopo il delay locale)
-    socket.on("get-button-total", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room || !room.buttonGame) return cb?.({ ok: false });
-        cb?.({ ok: true, total: room.buttonGame.total });
-    });
-
-    socket.on("press-button", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room || !room.buttonGame) return cb?.({ ok: false, error: "Nessun gioco attivo" });
-        const playerIndex = socket.data.playerIndex;
-        if (room.buttonGame.pressed.includes(playerIndex))
-            return cb?.({ ok: false, error: "Già premuto" });
-        room.buttonGame.pressed.push(playerIndex);
-        io.to(room.code).emit("button-pressed", {
-            pressedCount: room.buttonGame.pressed.length,
-            total: room.buttonGame.total,
-        });
-        if (room.buttonGame.pressed.length >= room.buttonGame.total) {
-            const loserPlayer = room.players.find((p) => p.index === playerIndex);
-            const loserName = loserPlayer?.name || `Giocatore ${playerIndex + 1}`;
-            io.to(room.code).emit("button-loser", { loserIndex: playerIndex, loserName });
-            room.buttonGame = null;
+    socket.on("press-button", cb => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room||!room.buttonGame) return cb?.({ok:false,error:"Nessun gioco attivo"});
+        const pi=socket.data.playerIndex;
+        if(room.buttonGame.pressed.includes(pi)) return cb?.({ok:false,error:"Già premuto"});
+        room.buttonGame.pressed.push(pi);
+        const {pressed,total}=room.buttonGame;
+        // Aggiorna contatore per tutti
+        io.to(room.code).emit("button-pressed",{pressedCount:pressed.length,total});
+        // Se tutti hanno premuto, l'ultimo è il loser
+        if(pressed.length>=total) {
+            const loserPlayer=room.players.find(p=>p.index===pi);
+            const loserName=loserPlayer?.name||`Giocatore ${pi+1}`;
+            io.to(room.code).emit("button-loser",{loserIndex:pi,loserName});
+            room.buttonGame=null;
         }
-        cb?.({ ok: true });
+        cb?.({ok:true});
     });
 
-    socket.on("flip-card", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room || room.status !== "playing") return cb?.({ ok: false, error: "Partita non attiva" });
-        if (socket.data.playerIndex !== room.currentPlayerIndex) return cb?.({ ok: false, error: "Non è il tuo turno" });
-        if (!room.cardRevealed) return cb?.({ ok: false, error: "Nessuna carta da girare" });
-        room.buttonGame = null;
-        room.cardRevealed = false;
-        room.currentCard = null;
-        room.currentPlayerIndex = getNextConnectedPlayerIndex(room, room.currentPlayerIndex);
-        io.to(room.code).emit("turn-changed", { currentPlayerIndex: room.currentPlayerIndex, deckCount: room.deck.length });
-        cb?.({ ok: true });
+    socket.on("flip-card", cb => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room||room.status!=="playing") return cb?.({ok:false,error:"Partita non attiva"});
+        if(socket.data.playerIndex!==room.currentPlayerIndex) return cb?.({ok:false,error:"Non è il tuo turno"});
+        if(!room.cardRevealed) return cb?.({ok:false,error:"Nessuna carta da girare"});
+        room.buttonGame=null; room.cardRevealed=false; room.currentCard=null;
+        room.currentPlayerIndex=nextIdx(room,room.currentPlayerIndex);
+        io.to(room.code).emit("turn-changed",{currentPlayerIndex:room.currentPlayerIndex,deckCount:room.deck.length});
+        cb?.({ok:true});
     });
 
-    socket.on("shuffle-deck", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room) return cb?.({ ok: false, error: "Stanza non trovata" });
-        if (room.hostSocketId !== socket.id) return cb?.({ ok: false, error: "Solo l'host può rimescolare" });
-        room.buttonGame = null;
-        room.deck = creaMazzo();
-        room.currentCard = null;
-        room.cardRevealed = false;
-        io.to(room.code).emit("deck-shuffled", { deckCount: room.deck.length, hostSocketId: room.hostSocketId });
-        cb?.({ ok: true });
+    socket.on("shuffle-deck", cb => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room) return cb?.({ok:false}); if(room.hostSocketId!==socket.id) return cb?.({ok:false});
+        room.buttonGame=null; room.deck=creaMazzo(); room.currentCard=null; room.cardRevealed=false;
+        io.to(room.code).emit("deck-shuffled",{deckCount:room.deck.length,hostSocketId:room.hostSocketId}); cb?.({ok:true});
     });
 
-    socket.on("restart-game", (cb) => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room) return cb?.({ ok: false, error: "Stanza non trovata" });
-        if (room.hostSocketId !== socket.id) return cb?.({ ok: false, error: "Solo l'host può ricominciare" });
-        room.buttonGame = null;
-        room.status = "waiting";
-        room.deck = [];
-        room.currentCard = null;
-        room.cardRevealed = false;
-        room.currentPlayerIndex = 0;
-        io.to(room.code).emit("game-restarted", {
-            roomCode: room.code, maxPlayers: room.maxPlayers,
-            hostSocketId: room.hostSocketId, players: getSafePlayers(room.players, room.hostSocketId),
-        });
-        io.to(room.code).emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
-        cb?.({ ok: true });
+    socket.on("restart-game", cb => {
+        const room=rooms.get(socket.data.roomCode);
+        if(!room) return cb?.({ok:false}); if(room.hostSocketId!==socket.id) return cb?.({ok:false});
+        room.buttonGame=null; room.status="waiting"; room.deck=[]; room.currentCard=null; room.cardRevealed=false; room.currentPlayerIndex=0;
+        io.to(room.code).emit("game-restarted",{roomCode:room.code,maxPlayers:room.maxPlayers,hostSocketId:room.hostSocketId,players:safe(room.players,room.hostSocketId)});
+        io.to(room.code).emit("players-updated",safe(room.players,room.hostSocketId)); cb?.({ok:true});
     });
 
     socket.on("disconnect", () => {
-        const room = rooms.get(socket.data.roomCode);
-        if (!room) return;
-        const player = room.players.find((p) => p.socketId === socket.id);
-        if (!player) return;
-        player.connected = false;
-        if (room.buttonGame && !room.buttonGame.pressed.includes(player.index)) {
-            room.buttonGame.total = Math.max(1, room.buttonGame.total - 1);
-            if (room.buttonGame.pressed.length >= room.buttonGame.total) {
-                const lastIdx = room.buttonGame.pressed[room.buttonGame.pressed.length - 1];
-                const loserPlayer = room.players.find((p) => p.index === lastIdx);
-                const loserName = loserPlayer?.name || `Giocatore ${lastIdx + 1}`;
-                io.to(room.code).emit("button-loser", { loserIndex: lastIdx, loserName });
-                room.buttonGame = null;
+        const room=rooms.get(socket.data.roomCode); if(!room) return;
+        const player=room.players.find(p=>p.socketId===socket.id); if(!player) return;
+        player.connected=false;
+        if(room.buttonGame&&!room.buttonGame.pressed.includes(player.index)) {
+            room.buttonGame.total=Math.max(1,room.buttonGame.total-1);
+            if(room.buttonGame.pressed.length>=room.buttonGame.total) {
+                const li=room.buttonGame.pressed[room.buttonGame.pressed.length-1];
+                const lp=room.players.find(p=>p.index===li);
+                io.to(room.code).emit("button-loser",{loserIndex:li,loserName:lp?.name||`Giocatore ${li+1}`});
+                room.buttonGame=null;
             }
         }
-        if (room.hostSocketId === socket.id) {
-            const nextHost = getNextHost(room);
-            if (nextHost) {
-                room.hostSocketId = nextHost.socketId;
-                io.to(room.code).emit("host-changed", { hostSocketId: room.hostSocketId, hostPlayerIndex: nextHost.index });
-            }
+        if(room.hostSocketId===socket.id) { const nh=nextHost(room); if(nh) { room.hostSocketId=nh.socketId; io.to(room.code).emit("host-changed",{hostSocketId:room.hostSocketId,hostPlayerIndex:nh.index}); } }
+        if(room.status==="playing"&&room.currentPlayerIndex===player.index&&room.players.some(p=>p.connected)) {
+            room.currentPlayerIndex=nextIdx(room,player.index); room.cardRevealed=false; room.currentCard=null;
+            io.to(room.code).emit("turn-changed",{currentPlayerIndex:room.currentPlayerIndex,deckCount:room.deck.length});
         }
-        if (room.status === "playing" && room.currentPlayerIndex === player.index) {
-            if (room.players.some((p) => p.connected)) {
-                room.currentPlayerIndex = getNextConnectedPlayerIndex(room, player.index);
-                room.cardRevealed = false;
-                room.currentCard = null;
-                io.to(room.code).emit("turn-changed", { currentPlayerIndex: room.currentPlayerIndex, deckCount: room.deck.length });
-            }
-        }
-        io.to(room.code).emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
-        if (room.players.every((p) => !p.connected)) rooms.delete(room.code);
+        io.to(room.code).emit("players-updated",safe(room.players,room.hostSocketId));
+        if(room.players.every(p=>!p.connected)) rooms.delete(room.code);
     });
 });
 
-const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => console.log(`DrinkME server on :${PORT}`));
+const PORT=process.env.PORT||3001;
+httpServer.listen(PORT,()=>console.log(`DrinkME server on :${PORT}`));

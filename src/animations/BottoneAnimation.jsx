@@ -1,93 +1,83 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { socket } from "../socket";
 import "./BottoneAnimation.css";
 
 export default function BottoneAnimation({ playerIndex, delay, onClose }) {
-    const [attivo, setAttivo] = useState(false);
-    const [haPressed, setHaPressed] = useState(false);
+    const [fase, setFase] = useState("attesa"); // attesa | attivo | premuto | fine
     const [pressedCount, setPressedCount] = useState(0);
-    const [total, setTotal] = useState(null);
-    const [loser, setLoser] = useState(null);
-    const [pressing, setPressing] = useState(false);
+    const [total, setTotal] = useState("?");
+    const [loser, setLoser] = useState(null); // { loserIndex, loserName }
+    const timerRef = useRef(null);
 
-    // Timer locale: parte al mount con il delay ricevuto dal server
+    // Avvia il timer locale al mount — nessuna dipendenza da socket per l'attivazione
     useEffect(() => {
-        if (delay == null) return;
-        const t = setTimeout(() => setAttivo(true), delay);
-        return () => clearTimeout(t);
-    }, [delay]);
+        const ms = delay ?? 5000;
+        timerRef.current = setTimeout(() => setFase("attivo"), ms);
+        return () => clearTimeout(timerRef.current);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Ascolta gli eventi socket
     useEffect(() => {
-        const onButtonPressed = ({ pressedCount: pc, total: t }) => { setPressedCount(pc); setTotal(t); };
-        const onButtonLoser = ({ loserIndex, loserName }) => setLoser({ loserIndex, loserName });
-
-        socket.on("button-pressed", onButtonPressed);
-        socket.on("button-loser", onButtonLoser);
+        const onPressed = ({ pressedCount: pc, total: t }) => {
+            setPressedCount(pc);
+            setTotal(t);
+        };
+        const onLoser = ({ loserIndex, loserName }) => {
+            setLoser({ loserIndex, loserName });
+            setFase("fine");
+        };
+        socket.on("button-pressed", onPressed);
+        socket.on("button-loser", onLoser);
         return () => {
-            socket.off("button-pressed", onButtonPressed);
-            socket.off("button-loser", onButtonLoser);
+            socket.off("button-pressed", onPressed);
+            socket.off("button-loser", onLoser);
         };
     }, []);
 
-    // Quando diventa attivo, chiedi al server il totale giocatori
-    useEffect(() => {
-        if (!attivo) return;
-        socket.emit("get-button-total", (res) => {
-            if (res?.total) setTotal(res.total);
-        });
-    }, [attivo]);
-
     const handlePress = () => {
-        if (!attivo || haPressed || loser) return;
-        setPressing(true);
-        setTimeout(() => setPressing(false), 150);
-        setHaPressed(true);
+        if (fase !== "attivo") return;
+        setFase("premuto");
         socket.emit("press-button", (res) => {
-            if (!res?.ok) setHaPressed(false); // rollback se errore
+            if (!res?.ok) setFase("attivo"); // rollback se errore server
         });
     };
 
-    const isLoser = loser?.loserIndex === playerIndex;
+    // ---- RENDER ----
+    if (fase === "fine" && loser) {
+        const isMe = loser.loserIndex === playerIndex;
+        return (
+            <div className="bottone-overlay" onClick={onClose}>
+                <div className="bottone-emoji-top">{isMe ? "😭" : "🎉"}</div>
+                <p className="bottone-titolo">{isMe ? "HAI PERSO!" : "SALVO!"}</p>
+                <p className="bottone-sottotitolo">
+                    <strong>{loser.loserName}</strong> è stato l'ultimo — deve bere! 🍺
+                </p>
+                <span className="bottone-hint">Tocca per continuare</span>
+            </div>
+        );
+    }
 
     return (
-        <div className="bottone-overlay" onClick={loser ? onClose : undefined}>
-
-            <div className="bottone-emoji-top">
-                {loser ? (isLoser ? "😭" : "🎉") : (attivo ? "🔴" : "⏳")}
-            </div>
+        <div className="bottone-overlay">
+            <div className="bottone-emoji-top">{fase === "attivo" || fase === "premuto" ? "🔴" : "⏳"}</div>
 
             <p className="bottone-titolo">
-                {loser
-                    ? (isLoser ? "HAI PERSO!" : "SALVO!")
-                    : (attivo ? "PREMI IL BOTTONE!" : "PREMI IL BOTTONE QUANDO È ATTIVO!")}
+                {fase === "attesa" ? "PREMI IL BOTTONE QUANDO È ATTIVO!" : "PREMI IL BOTTONE!"}
             </p>
 
             <p className="bottone-sottotitolo">
-                {loser
-                    ? `${loser.loserName} è stato l'ultimo — deve bere!`
-                    : total !== null
-                        ? `${pressedCount}/${total} hanno premuto — l'ultimo beve! 🍺`
-                        : "Aspetta il segnale..."
-                }
+                {fase === "attesa"
+                    ? "Aspetta il segnale..."
+                    : `${pressedCount}/${total} hanno premuto — l'ultimo beve! 🍺`}
             </p>
 
-            {!loser && (
-                <button
-                    className={[
-                        "bottone-btn",
-                        !attivo ? "disabilitato" : "",
-                        attivo && !haPressed ? "attivo" : "",
-                        haPressed ? "premuto" : "",
-                        pressing ? "pressing" : "",
-                    ].filter(Boolean).join(" ")}
-                    onClick={handlePress}
-                    disabled={!attivo || haPressed}
-                >
-                    {haPressed ? "✓ PREMUTO" : "PRESS ME"}
-                </button>
-            )}
-
-            {loser && <span className="bottone-hint">Tocca per continuare</span>}
+            <button
+                className={["bottone-btn", fase === "attesa" ? "disabilitato" : "", fase === "attivo" ? "attivo" : "", fase === "premuto" ? "premuto" : ""].filter(Boolean).join(" ")}
+                onClick={handlePress}
+                disabled={fase !== "attivo"}
+            >
+                {fase === "premuto" ? "✓ PREMUTO" : "PRESS ME"}
+            </button>
         </div>
     );
 }
