@@ -108,24 +108,42 @@ export default function Gioco() {
 
     useEffect(() => {
         const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi }) => {
-            setCurrentCard(card); setCardRevealed(true); setDeckCount(dc);
+            setCurrentCard(card);
+            setCardRevealed(true);
+            setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
+
             const valore = card.split("-")[0];
             const idx = cpi ?? 0;
             const chi = playersRef.current.find((p) => p.index === idx);
             const nome = chi?.name || `Giocatore ${idx + 1}`;
+
+            // Bottone: montato subito senza delay per avere i listener pronti
+            if (valore === "7") {
+                setBottoneAttivo(true);
+                return;
+            }
+
             setTimeout(() => {
                 if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
                 if (valore === "3")  { setBeviPlayerName(nome);   setBeviAttivo(true); }
                 if (valore === "4")  { setVikingPlayerIndex(idx); setVikingPlayerName(nome); setVikingAttivo(true); }
                 if (valore === "5")  { setMirrorPlayerName(nome); setMirrorAttivo(true); }
                 if (valore === "6")  { setUominiAttivo(true); }
-                if (valore === "7")  { setBottoneAttivo(true); }
                 if (valore === "12") { setDonneAttivo(true); }
                 if (valore === "13") { setMattoPlayerName(nome);  setMattoAttivo(true); }
             }, 250);
         };
-        const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => { setCPI(cpi); setDeckCount(dc); setCardRevealed(false); setCurrentCard(null); };
+
+        const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
+            setCPI(cpi);
+            setDeckCount(dc);
+            setCardRevealed(false);
+            setCurrentCard(null);
+            // Reset animazione bottone se il turno cambia senza che qualcuno abbia chiuso
+            setBottoneAttivo(false);
+        };
+
         const onDeckShuffled = ({ deckCount: dc }) => { setDeckCount(dc); setCurrentCard(null); setCardRevealed(false); };
         const onPlayersUpdated = (updatedPlayers) => { setPlayers(updatedPlayers); const me = updatedPlayers.find((pl) => pl.index === playerIndex); setIsHost(Boolean(me?.isHost)); };
         const onHostChanged = ({ hostPlayerIndex }) => { setIsHost(playerIndex === hostPlayerIndex); };
