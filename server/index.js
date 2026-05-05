@@ -20,6 +20,13 @@ const rooms = new Map();
 const SEMI = ["F", "P", "C", "Q"];
 const VALORI = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
+// Mappa carta regola -> valore numerico nel mazzo
+const REGOLA_TO_VALORE = {
+    "2": "2", "3": "3", "4": "4", "5": "5", "6": "6",
+    "7": "7", "8": "8", "9": "9", "10": "10",
+    "J": "11", "Q": "12", "K": "13",
+};
+
 function creaMazzo() {
     const deck = SEMI.flatMap((s) => VALORI.map((v) => `${v}-${s}`));
     for (let i = deck.length - 1; i > 0; i--) {
@@ -143,6 +150,23 @@ io.on("connection", (socket) => {
         cb?.({ ok: true });
     });
 
+    // Forza la prossima carta pescata (solo per test/debug)
+    socket.on("force-card", ({ valore }, cb) => {
+        const room = rooms.get(socket.data.roomCode);
+        if (!room || room.status !== "playing") return cb?.({ ok: false });
+        if (room.cardRevealed) return cb?.({ ok: false, error: "Carta già scoperta" });
+
+        const valoreNumerico = REGOLA_TO_VALORE[valore] ?? valore;
+        const idx = room.deck.findIndex((c) => c.startsWith(`${valoreNumerico}-`));
+        if (idx === -1) return cb?.({ ok: false, error: "Carta non trovata nel mazzo" });
+
+        // Sposta la carta trovata in cima al mazzo (posizione 0)
+        const [carta] = room.deck.splice(idx, 1);
+        room.deck.unshift(carta);
+
+        cb?.({ ok: true, carta });
+    });
+
     socket.on("draw-card", (cb) => {
         const room = rooms.get(socket.data.roomCode);
         if (!room || room.status !== "playing") return cb?.({ ok: false, error: "Partita non attiva" });
@@ -150,8 +174,8 @@ io.on("connection", (socket) => {
         if (room.cardRevealed) return cb?.({ ok: false, error: "Carta già pescata" });
         if (room.deck.length === 0) return cb?.({ ok: false, error: "Mazzo esaurito" });
 
-        const idx = Math.floor(Math.random() * room.deck.length);
-        const card = room.deck.splice(idx, 1)[0];
+        // Prende sempre la prima carta (se force-card l'ha messa in cima, esce quella)
+        const card = room.deck.shift();
         room.currentCard = card;
         room.cardRevealed = true;
 
@@ -160,16 +184,13 @@ io.on("connection", (socket) => {
         if (valore === "7") {
             const connectedPlayers = room.players.filter((p) => p.connected);
             const delay = Math.floor(Math.random() * 9000) + 1000;
-            // buttonGame inizializzato SUBITO — press-button funziona da ora
             room.buttonGame = {
                 pressed: [],
                 total: connectedPlayers.length,
                 delay,
                 timer: setTimeout(() => {
                     if (!room.buttonGame) return;
-                    io.to(room.code).emit("button-game-start", {
-                        total: room.buttonGame.total,
-                    });
+                    io.to(room.code).emit("button-game-start", { total: room.buttonGame.total });
                 }, delay),
             };
         }
@@ -186,18 +207,14 @@ io.on("connection", (socket) => {
     socket.on("press-button", (cb) => {
         const room = rooms.get(socket.data.roomCode);
         if (!room || !room.buttonGame) return cb?.({ ok: false, error: "Nessun gioco attivo" });
-
         const playerIndex = socket.data.playerIndex;
         if (room.buttonGame.pressed.includes(playerIndex))
             return cb?.({ ok: false, error: "Già premuto" });
-
         room.buttonGame.pressed.push(playerIndex);
-
         io.to(room.code).emit("button-pressed", {
             pressedCount: room.buttonGame.pressed.length,
             total: room.buttonGame.total,
         });
-
         if (room.buttonGame.pressed.length >= room.buttonGame.total) {
             const loserPlayer = room.players.find((p) => p.index === playerIndex);
             const loserName = loserPlayer?.name || `Giocatore ${playerIndex + 1}`;
@@ -205,7 +222,6 @@ io.on("connection", (socket) => {
             clearTimeout(room.buttonGame.timer);
             room.buttonGame = null;
         }
-
         cb?.({ ok: true });
     });
 
@@ -258,7 +274,6 @@ io.on("connection", (socket) => {
         const player = room.players.find((p) => p.socketId === socket.id);
         if (!player) return;
         player.connected = false;
-
         if (room.buttonGame && !room.buttonGame.pressed.includes(player.index)) {
             room.buttonGame.total = Math.max(1, room.buttonGame.total - 1);
             if (room.buttonGame.pressed.length >= room.buttonGame.total) {
@@ -270,7 +285,6 @@ io.on("connection", (socket) => {
                 room.buttonGame = null;
             }
         }
-
         if (room.hostSocketId === socket.id) {
             const nextHost = getNextHost(room);
             if (nextHost) {
@@ -278,7 +292,6 @@ io.on("connection", (socket) => {
                 io.to(room.code).emit("host-changed", { hostSocketId: room.hostSocketId, hostPlayerIndex: nextHost.index });
             }
         }
-
         if (room.status === "playing" && room.currentPlayerIndex === player.index) {
             if (room.players.some((p) => p.connected)) {
                 room.currentPlayerIndex = getNextConnectedPlayerIndex(room, player.index);
@@ -287,7 +300,6 @@ io.on("connection", (socket) => {
                 io.to(room.code).emit("turn-changed", { currentPlayerIndex: room.currentPlayerIndex, deckCount: room.deck.length });
             }
         }
-
         io.to(room.code).emit("players-updated", getSafePlayers(room.players, room.hostSocketId));
         if (room.players.every((p) => !p.connected)) rooms.delete(room.code);
     });

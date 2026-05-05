@@ -27,18 +27,18 @@ function loadSession() { try { return JSON.parse(sessionStorage.getItem(SESSION_
 function clearSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {} }
 
 const REGOLE = [
-    { carta: "2", testo: "Two is for you — Scegli chi beve." },
-    { carta: "3", testo: "Three is for me — Beve chi pesca la carta." },
-    { carta: "4", testo: "Vichingo — Chi pesca fa le corna, i giocatori ai lati remano, gli altri fanno le onde. L'ultimo che lo fa beve! Il vichingo resta finché qualcun altro pesca il 4." },
-    { carta: "5", testo: "Specchio — Scegli un giocatore: ogni volta che bevi, beve anche lui. Si resetta quando qualcun altro pesca il 5." },
-    { carta: "6", testo: "Six for dicks — Bevono i maschi." },
-    { carta: "7", testo: "Bottone — Chi preme per ultimo il tasto beve!" },
-    { carta: "8", testo: "Riposo — Questa volta nessuno beve, vi è andata bene!" },
-    { carta: "9", testo: "Rima — Di' una parola, in senso orario ognuno dice una rima. Chi sbaglia o fa scadere il tempo beve!" },
+    { carta: "2",  testo: "Two is for you — Scegli chi beve." },
+    { carta: "3",  testo: "Three is for me — Beve chi pesca la carta." },
+    { carta: "4",  testo: "Vichingo — Chi pesca fa le corna, i giocatori ai lati remano, gli altri fanno le onde. L'ultimo che lo fa beve! Il vichingo resta finché qualcun altro pesca il 4." },
+    { carta: "5",  testo: "Specchio — Scegli un giocatore: ogni volta che bevi, beve anche lui. Si resetta quando qualcun altro pesca il 5." },
+    { carta: "6",  testo: "Six for dicks — Bevono i maschi." },
+    { carta: "7",  testo: "Bottone — Chi preme per ultimo il tasto beve!" },
+    { carta: "8",  testo: "Riposo — Questa volta nessuno beve, vi è andata bene!" },
+    { carta: "9",  testo: "Rima — Di' una parola, in senso orario ognuno dice una rima. Chi sbaglia o fa scadere il tempo beve!" },
     { carta: "10", testo: "Categoria — Scegli una categoria (es. marchi di auto, brand di vestiti…), in senso orario ognuno dice un elemento. Chi sbaglia o fa scadere il tempo beve!" },
-    { carta: "J", testo: "Non ho mai — Chi ha almeno una volta compiuto l'azione che compare beve!" },
-    { carta: "Q", testo: "Bevono le donne." },
-    { carta: "K", testo: "Il Matto — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
+    { carta: "J",  testo: "Non ho mai — Chi ha almeno una volta compiuto l'azione che compare beve!" },
+    { carta: "Q",  testo: "Bevono le donne." },
+    { carta: "K",  testo: "Il Matto — Chi pesca il K fa domande durante la partita: chi risponde beve! Si resetta quando qualcun altro pesca il K." },
 ];
 
 export default function Gioco() {
@@ -59,6 +59,7 @@ export default function Gioco() {
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
     const [rejoining, setRejoining] = useState(false);
+    const [forceToast, setForceToast] = useState(null); // "7" | null
 
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
@@ -118,11 +119,7 @@ export default function Gioco() {
             const chi = playersRef.current.find((p) => p.index === idx);
             const nome = chi?.name || `Giocatore ${idx + 1}`;
 
-            // Bottone: montato subito senza delay per avere i listener pronti
-            if (valore === "7") {
-                setBottoneAttivo(true);
-                return;
-            }
+            if (valore === "7") { setBottoneAttivo(true); return; }
 
             setTimeout(() => {
                 if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
@@ -136,14 +133,8 @@ export default function Gioco() {
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
-            setCPI(cpi);
-            setDeckCount(dc);
-            setCardRevealed(false);
-            setCurrentCard(null);
-            // Reset animazione bottone se il turno cambia senza che qualcuno abbia chiuso
-            setBottoneAttivo(false);
+            setCPI(cpi); setDeckCount(dc); setCardRevealed(false); setCurrentCard(null); setBottoneAttivo(false);
         };
-
         const onDeckShuffled = ({ deckCount: dc }) => { setDeckCount(dc); setCurrentCard(null); setCardRevealed(false); };
         const onPlayersUpdated = (updatedPlayers) => { setPlayers(updatedPlayers); const me = updatedPlayers.find((pl) => pl.index === playerIndex); setIsHost(Boolean(me?.isHost)); };
         const onHostChanged = ({ hostPlayerIndex }) => { setIsHost(playerIndex === hostPlayerIndex); };
@@ -181,6 +172,13 @@ export default function Gioco() {
         return () => document.removeEventListener("keydown", handleKey);
     }, [aiutoAperto, giocatoriAperti, menuAperto]);
 
+    // Auto-dismiss toast dopo 2.5s
+    useEffect(() => {
+        if (!forceToast) return;
+        const t = setTimeout(() => setForceToast(null), 2500);
+        return () => clearTimeout(t);
+    }, [forceToast]);
+
     const isMyTurn = playerIndex === currentPlayerIndex;
     const mazzoEsaurito = deckCount === 0 && !cardRevealed;
     const giocatoreAttivo = players[currentPlayerIndex];
@@ -194,6 +192,16 @@ export default function Gioco() {
     const handleRimescola = () => { if (!isHost) return; socket.emit("shuffle-deck"); };
     const handleRicomincia = () => { if (!isHost) return; setMenuAperto(false); socket.emit("restart-game"); };
     const handleEsci = () => { setMenuAperto(false); clearSession(); socket.disconnect(); navigate("/accesso", { replace: true }); };
+
+    const handleForzaCarta = (carta) => {
+        if (!isMyTurn || cardRevealed) return;
+        socket.emit("force-card", { valore: carta }, (res) => {
+            if (res?.ok) {
+                setForceToast(carta);
+                setAiuto(false);
+            }
+        });
+    };
 
     if (rejoining) {
         return (
@@ -264,6 +272,13 @@ export default function Gioco() {
                     </div>
                 </div>
 
+                {/* Toast conferma carta forzata */}
+                {forceToast && (
+                    <div className="gioco-force-toast">
+                        🃏 Prossima carta: <strong>{forceToast}</strong>
+                    </div>
+                )}
+
                 <div className="gioco-player-card">
                     <div className="gioco-player-turno">Turno di</div>
                     <img src={beerPng} alt="Card giocatore" className="gioco-beer-img" draggable="false" />
@@ -274,7 +289,7 @@ export default function Gioco() {
                 {beviAttivo    && <BeviAnimation    giocatore={beviPlayerName}    onClose={() => setBeviAttivo(false)} />}
                 {donneAttivo   && <DonneAnimation   onClose={() => setDonneAttivo(false)} />}
                 {uominiAttivo  && <UominiAnimation  onClose={() => setUominiAttivo(false)} />}
-                {bottoneAttivo && <BottoneAnimation players={players} playerIndex={playerIndex} onClose={() => setBottoneAttivo(false)} />}
+                {bottoneAttivo && <BottoneAnimation playerIndex={playerIndex} onClose={() => setBottoneAttivo(false)} />}
                 {vikingAttivo  && <VikingAnimation  giocatore={vikingPlayerName}  onClose={() => setVikingAttivo(false)} />}
                 {mirrorAttivo  && <MirrorAnimation  giocatore={mirrorPlayerName}  onClose={() => setMirrorAttivo(false)} />}
                 {mattoAttivo   && <MattoAnimation   giocatore={mattoPlayerName}   onClose={() => setMattoAttivo(false)} />}
@@ -283,10 +298,20 @@ export default function Gioco() {
             {aiutoAperto && createPortal(
                 <div className="aiuto-overlay" role="dialog" aria-modal="true" onClick={() => setAiuto(false)}>
                     <div className="aiuto-popup" onClick={(e) => e.stopPropagation()}>
-                        <div className="aiuto-header"><span className="aiuto-title">📖 REGOLE</span><button className="aiuto-close" onClick={() => setAiuto(false)}>✕</button></div>
+                        <div className="aiuto-header">
+                            <span className="aiuto-title">📖 REGOLE</span>
+                            <button className="aiuto-close" onClick={() => setAiuto(false)}>✕</button>
+                        </div>
+                        {isMyTurn && !cardRevealed && (
+                            <p className="aiuto-debug-hint">🔧 Tocca una regola per forzare quella carta</p>
+                        )}
                         <ol className="aiuto-list">
                             {REGOLE.map(({ carta, testo }) => (
-                                <li key={carta} className="aiuto-item">
+                                <li
+                                    key={carta}
+                                    className={`aiuto-item${isMyTurn && !cardRevealed ? " aiuto-item--forzabile" : ""}`}
+                                    onClick={() => handleForzaCarta(carta)}
+                                >
                                     <span className="aiuto-carta">{carta}</span>
                                     <span className="aiuto-testo">{testo}</span>
                                 </li>
