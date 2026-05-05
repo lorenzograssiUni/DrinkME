@@ -26,6 +26,12 @@ function saveSession(data) { try { sessionStorage.setItem(SESSION_KEY, JSON.stri
 function loadSession() { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (_) { return null; } }
 function clearSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {} }
 
+// Mappa etichetta regola → valore numerico nel nome file carta
+const REGOLA_TO_VALORE = {
+    "2":"2", "3":"3", "4":"4", "5":"5", "6":"6", "7":"7",
+    "8":"8", "9":"9", "10":"10", "J":"11", "Q":"12", "K":"13",
+};
+
 const REGOLE = [
     { carta: "2",  testo: "Two is for you — Scegli chi beve." },
     { carta: "3",  testo: "Three is for me — Beve chi pesca la carta." },
@@ -59,7 +65,6 @@ export default function Gioco() {
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
     const [rejoining, setRejoining] = useState(false);
-    const [forceToast, setForceToast] = useState(null);
 
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
@@ -114,29 +119,8 @@ export default function Gioco() {
             setCardRevealed(true);
             setDeckCount(dc);
             if (cpi !== undefined) setCPI(cpi);
-
-            const valore = card.split("-")[0];
-            const idx = cpi ?? 0;
-            const chi = playersRef.current.find((p) => p.index === idx);
-            const nome = chi?.name || `Giocatore ${idx + 1}`;
-
-            if (valore === "7") {
-                setBottoneDelay(buttonDelay);
-                setBottoneAttivo(true);
-                return;
-            }
-
-            setTimeout(() => {
-                if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
-                if (valore === "3")  { setBeviPlayerName(nome);   setBeviAttivo(true); }
-                if (valore === "4")  { setVikingPlayerIndex(idx); setVikingPlayerName(nome); setVikingAttivo(true); }
-                if (valore === "5")  { setMirrorPlayerName(nome); setMirrorAttivo(true); }
-                if (valore === "6")  { setUominiAttivo(true); }
-                if (valore === "12") { setDonneAttivo(true); }
-                if (valore === "13") { setMattoPlayerName(nome);  setMattoAttivo(true); }
-            }, 250);
+            triggerAnimazione(card, cpi ?? currentPlayerIndex, buttonDelay);
         };
-
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
             setCPI(cpi); setDeckCount(dc); setCardRevealed(false); setCurrentCard(null);
             setBottoneAttivo(false); setBottoneDelay(null);
@@ -178,18 +162,33 @@ export default function Gioco() {
         return () => document.removeEventListener("keydown", handleKey);
     }, [aiutoAperto, giocatoriAperti, menuAperto]);
 
-    useEffect(() => {
-        if (!forceToast) return;
-        const t = setTimeout(() => setForceToast(null), 2500);
-        return () => clearTimeout(t);
-    }, [forceToast]);
+    // Attiva l'animazione giusta in base al valore della carta
+    const triggerAnimazione = (card, cpi, buttonDelay) => {
+        const valore = card.split("-")[0];
+        const chi = playersRef.current.find((p) => p.index === cpi);
+        const nome = chi?.name || `Giocatore ${cpi + 1}`;
+
+        if (valore === "7") {
+            const delay = buttonDelay ?? (Math.floor(Math.random() * 9000) + 1000);
+            setBottoneDelay(delay);
+            setBottoneAttivo(true);
+            return;
+        }
+        setTimeout(() => {
+            if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
+            if (valore === "3")  { setBeviPlayerName(nome);   setBeviAttivo(true); }
+            if (valore === "4")  { setVikingPlayerIndex(cpi); setVikingPlayerName(nome); setVikingAttivo(true); }
+            if (valore === "5")  { setMirrorPlayerName(nome); setMirrorAttivo(true); }
+            if (valore === "6")  { setUominiAttivo(true); }
+            if (valore === "12") { setDonneAttivo(true); }
+            if (valore === "13") { setMattoPlayerName(nome);  setMattoAttivo(true); }
+        }, 250);
+    };
 
     const isMyTurn = playerIndex === currentPlayerIndex;
     const mazzoEsaurito = deckCount === 0 && !cardRevealed;
-    const giocatoreAttivo = players[currentPlayerIndex];
+    const giocatoreAttivo = players.find(p => p.index === currentPlayerIndex);
     const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
-
-    // Dev mode: forzabile da chiunque finché la carta non è scoperta
     const puoForzare = !cardRevealed;
 
     const handleClick = () => {
@@ -201,11 +200,16 @@ export default function Gioco() {
     const handleRicomincia = () => { if (!isHost) return; setMenuAperto(false); socket.emit("restart-game"); };
     const handleEsci = () => { setMenuAperto(false); clearSession(); socket.disconnect(); navigate("/accesso", { replace: true }); };
 
+    // DEV MODE: 100% client-side, niente socket
     const handleForzaCarta = (carta) => {
-        if (!puoForzare) return; // solo controllo: carta non ancora scoperta
-        socket.emit("force-card", { valore: carta }, (res) => {
-            if (res?.ok) { setForceToast(carta); setAiuto(false); }
-        });
+        if (!puoForzare) return;
+        const val = REGOLA_TO_VALORE[carta];
+        if (!val) return;
+        const card = `${val}-P`; // sempre picche
+        setCurrentCard(card);
+        setCardRevealed(true);
+        setAiuto(false);
+        triggerAnimazione(card, currentPlayerIndex, null);
     };
 
     if (rejoining) {
@@ -276,12 +280,6 @@ export default function Gioco() {
                         )}
                     </div>
                 </div>
-
-                {forceToast && (
-                    <div className="gioco-force-toast">
-                        🃏 Prossima carta: <strong>{forceToast}</strong>
-                    </div>
-                )}
 
                 <div className="gioco-player-card">
                     <div className="gioco-player-turno">Turno di</div>
