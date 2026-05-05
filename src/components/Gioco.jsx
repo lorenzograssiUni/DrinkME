@@ -121,7 +121,6 @@ export default function Gioco() {
             const nome = chi?.name || `Giocatore ${idx + 1}`;
 
             if (valore === "7") {
-                // Il delay arriva dal server nel payload, il timer lo gestisce BottoneAnimation al mount
                 setBottoneDelay(buttonDelay);
                 setBottoneAttivo(true);
                 return;
@@ -190,6 +189,9 @@ export default function Gioco() {
     const giocatoreAttivo = players[currentPlayerIndex];
     const nomeAttivo = giocatoreAttivo?.name || `Giocatore ${currentPlayerIndex + 1}`;
 
+    // Dev mode: forzabile da chiunque finché la carta non è scoperta
+    const puoForzare = !cardRevealed;
+
     const handleClick = () => {
         if (!isMyTurn) return;
         if (!cardRevealed) { if (deckCount === 0) return; socket.emit("draw-card"); }
@@ -200,7 +202,7 @@ export default function Gioco() {
     const handleEsci = () => { setMenuAperto(false); clearSession(); socket.disconnect(); navigate("/accesso", { replace: true }); };
 
     const handleForzaCarta = (carta) => {
-        if (!isMyTurn || cardRevealed) return;
+        if (!puoForzare) return; // solo controllo: carta non ancora scoperta
         socket.emit("force-card", { valore: carta }, (res) => {
             if (res?.ok) { setForceToast(carta); setAiuto(false); }
         });
@@ -304,14 +306,14 @@ export default function Gioco() {
                             <span className="aiuto-title">📖 REGOLE</span>
                             <button className="aiuto-close" onClick={() => setAiuto(false)}>✕</button>
                         </div>
-                        {isMyTurn && !cardRevealed && (
+                        {puoForzare && (
                             <p className="aiuto-debug-hint">🔧 Tocca una regola per forzare quella carta</p>
                         )}
                         <ol className="aiuto-list">
                             {REGOLE.map(({ carta, testo }) => (
                                 <li
                                     key={carta}
-                                    className={`aiuto-item${isMyTurn && !cardRevealed ? " aiuto-item--forzabile" : ""}`}
+                                    className={`aiuto-item${puoForzare ? " aiuto-item--forzabile" : ""}`}
                                     onClick={() => handleForzaCarta(carta)}
                                 >
                                     <span className="aiuto-carta">{carta}</span>
