@@ -87,19 +87,17 @@ io.on("connection", socket => {
         cb?.({ok:true});
     });
 
-    // Dev mode: pesca direttamente la carta di picche del valore scelto ed emette card-drawn a tutti
+    // Dev mode / debug: forza una carta e, se è un 7, avvia subito il mini-gioco bottone
     socket.on("force-card", ({valore}, cb) => {
         const room=rooms.get(socket.data.roomCode);
         if(!room||room.status!=="playing") return cb?.({ok:false,error:"Partita non attiva"});
         if(room.cardRevealed) return cb?.({ok:false,error:"Carta già scoperta"});
 
         const val = REGOLA_TO_VALORE[valore] ?? valore;
-        // Cerca prima la versione di picche (P), poi qualsiasi seme come fallback
         let idx = room.deck.findIndex(c => c === `${val}-P`);
         if (idx === -1) idx = room.deck.findIndex(c => c.startsWith(`${val}-`));
         if (idx === -1) return cb?.({ok:false,error:"Carta non trovata nel mazzo"});
 
-        // Rimuovi la carta dal mazzo e pescala direttamente
         const [card] = room.deck.splice(idx, 1);
         room.currentCard = card;
         room.cardRevealed = true;
@@ -109,6 +107,8 @@ io.on("connection", socket => {
             const total = room.players.filter(p => p.connected).length;
             buttonDelay = Math.floor(Math.random()*9000)+1000;
             room.buttonGame = {pressed:[],total,started:Date.now(),delay:buttonDelay};
+            // subito broadcast dello stato iniziale 0/total, così il client non mostra 0/?
+            io.to(room.code).emit("button-pressed", { pressedCount: 0, total });
         }
 
         io.to(room.code).emit("card-drawn", {
@@ -137,6 +137,7 @@ io.on("connection", socket => {
             const total=room.players.filter(p=>p.connected).length;
             buttonDelay=Math.floor(Math.random()*9000)+1000;
             room.buttonGame={pressed:[],total,started:Date.now(),delay:buttonDelay};
+            io.to(room.code).emit("button-pressed", { pressedCount: 0, total });
         }
 
         io.to(room.code).emit("card-drawn",{card,deckCount:room.deck.length,currentPlayerIndex:room.currentPlayerIndex,buttonDelay});
