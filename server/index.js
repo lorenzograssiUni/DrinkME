@@ -87,14 +87,38 @@ io.on("connection", socket => {
         cb?.({ok:true});
     });
 
-    socket.on("force-card", ({valore},cb) => {
+    // Dev mode: pesca direttamente la carta di picche del valore scelto ed emette card-drawn a tutti
+    socket.on("force-card", ({valore}, cb) => {
         const room=rooms.get(socket.data.roomCode);
-        if(!room||room.status!=="playing"||room.cardRevealed) return cb?.({ok:false});
-        const val=REGOLA_TO_VALORE[valore]??valore;
-        const idx=room.deck.findIndex(c=>c.startsWith(`${val}-`));
-        if(idx===-1) return cb?.({ok:false,error:"Carta non trovata"});
-        const [carta]=room.deck.splice(idx,1); room.deck.unshift(carta);
-        cb?.({ok:true,carta});
+        if(!room||room.status!=="playing") return cb?.({ok:false,error:"Partita non attiva"});
+        if(room.cardRevealed) return cb?.({ok:false,error:"Carta già scoperta"});
+
+        const val = REGOLA_TO_VALORE[valore] ?? valore;
+        // Cerca prima la versione di picche (P), poi qualsiasi seme come fallback
+        let idx = room.deck.findIndex(c => c === `${val}-P`);
+        if (idx === -1) idx = room.deck.findIndex(c => c.startsWith(`${val}-`));
+        if (idx === -1) return cb?.({ok:false,error:"Carta non trovata nel mazzo"});
+
+        // Rimuovi la carta dal mazzo e pescala direttamente
+        const [card] = room.deck.splice(idx, 1);
+        room.currentCard = card;
+        room.cardRevealed = true;
+
+        let buttonDelay = null;
+        if (card.startsWith("7-")) {
+            const total = room.players.filter(p => p.connected).length;
+            buttonDelay = Math.floor(Math.random()*9000)+1000;
+            room.buttonGame = {pressed:[],total,started:Date.now(),delay:buttonDelay};
+        }
+
+        io.to(room.code).emit("card-drawn", {
+            card,
+            deckCount: room.deck.length,
+            currentPlayerIndex: room.currentPlayerIndex,
+            buttonDelay,
+        });
+
+        cb?.({ok:true, card});
     });
 
     socket.on("draw-card", cb => {
@@ -111,7 +135,7 @@ io.on("connection", socket => {
         let buttonDelay=null;
         if(card.startsWith("7-")) {
             const total=room.players.filter(p=>p.connected).length;
-            buttonDelay=Math.floor(Math.random()*9000)+1000; // 1-10 secondi
+            buttonDelay=Math.floor(Math.random()*9000)+1000;
             room.buttonGame={pressed:[],total,started:Date.now(),delay:buttonDelay};
         }
 
@@ -126,9 +150,7 @@ io.on("connection", socket => {
         if(room.buttonGame.pressed.includes(pi)) return cb?.({ok:false,error:"Già premuto"});
         room.buttonGame.pressed.push(pi);
         const {pressed,total}=room.buttonGame;
-        // Aggiorna contatore per tutti
         io.to(room.code).emit("button-pressed",{pressedCount:pressed.length,total});
-        // Se tutti hanno premuto, l'ultimo è il loser
         if(pressed.length>=total) {
             const loserPlayer=room.players.find(p=>p.index===pi);
             const loserName=loserPlayer?.name||`Giocatore ${pi+1}`;
