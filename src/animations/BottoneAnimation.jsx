@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { socket } from "../socket";
 import "./BottoneAnimation.css";
 
-export default function BottoneAnimation({ playerIndex, onClose }) {
+export default function BottoneAnimation({ playerIndex, delay, onClose }) {
     const [attivo, setAttivo] = useState(false);
     const [haPressed, setHaPressed] = useState(false);
     const [pressedCount, setPressedCount] = useState(0);
@@ -10,27 +10,41 @@ export default function BottoneAnimation({ playerIndex, onClose }) {
     const [loser, setLoser] = useState(null);
     const [pressing, setPressing] = useState(false);
 
+    // Timer locale: parte al mount con il delay ricevuto dal server
     useEffect(() => {
-        const onGameStart = ({ total: t }) => { setTotal(t); setAttivo(true); };
+        if (delay == null) return;
+        const t = setTimeout(() => setAttivo(true), delay);
+        return () => clearTimeout(t);
+    }, [delay]);
+
+    useEffect(() => {
         const onButtonPressed = ({ pressedCount: pc, total: t }) => { setPressedCount(pc); setTotal(t); };
         const onButtonLoser = ({ loserIndex, loserName }) => setLoser({ loserIndex, loserName });
 
-        socket.on("button-game-start", onGameStart);
         socket.on("button-pressed", onButtonPressed);
         socket.on("button-loser", onButtonLoser);
         return () => {
-            socket.off("button-game-start", onGameStart);
             socket.off("button-pressed", onButtonPressed);
             socket.off("button-loser", onButtonLoser);
         };
     }, []);
+
+    // Quando diventa attivo, chiedi al server il totale giocatori
+    useEffect(() => {
+        if (!attivo) return;
+        socket.emit("get-button-total", (res) => {
+            if (res?.total) setTotal(res.total);
+        });
+    }, [attivo]);
 
     const handlePress = () => {
         if (!attivo || haPressed || loser) return;
         setPressing(true);
         setTimeout(() => setPressing(false), 150);
         setHaPressed(true);
-        socket.emit("press-button");
+        socket.emit("press-button", (res) => {
+            if (!res?.ok) setHaPressed(false); // rollback se errore
+        });
     };
 
     const isLoser = loser?.loserIndex === playerIndex;

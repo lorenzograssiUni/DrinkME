@@ -59,7 +59,7 @@ export default function Gioco() {
     const [currentCard, setCurrentCard] = useState(initialCurrentCard ?? null);
     const [cardRevealed, setCardRevealed] = useState(initialCardRevealed ?? false);
     const [rejoining, setRejoining] = useState(false);
-    const [forceToast, setForceToast] = useState(null); // "7" | null
+    const [forceToast, setForceToast] = useState(null);
 
     const [menuAperto, setMenuAperto] = useState(false);
     const [aiutoAperto, setAiuto] = useState(false);
@@ -79,6 +79,7 @@ export default function Gioco() {
     const [donneAttivo, setDonneAttivo] = useState(false);
     const [uominiAttivo, setUominiAttivo] = useState(false);
     const [bottoneAttivo, setBottoneAttivo] = useState(false);
+    const [bottoneDelay, setBottoneDelay] = useState(null);
 
     const menuRef = useRef(null);
     const playersRef = useRef(players);
@@ -108,7 +109,7 @@ export default function Gioco() {
     }, []);
 
     useEffect(() => {
-        const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi }) => {
+        const onCardDrawn = ({ card, deckCount: dc, currentPlayerIndex: cpi, buttonDelay }) => {
             setCurrentCard(card);
             setCardRevealed(true);
             setDeckCount(dc);
@@ -119,7 +120,12 @@ export default function Gioco() {
             const chi = playersRef.current.find((p) => p.index === idx);
             const nome = chi?.name || `Giocatore ${idx + 1}`;
 
-            if (valore === "7") { setBottoneAttivo(true); return; }
+            if (valore === "7") {
+                // Il delay arriva dal server nel payload, il timer lo gestisce BottoneAnimation al mount
+                setBottoneDelay(buttonDelay);
+                setBottoneAttivo(true);
+                return;
+            }
 
             setTimeout(() => {
                 if (valore === "2")  { setSceltaPlayerName(nome); setSceltaAttivo(true); }
@@ -133,7 +139,8 @@ export default function Gioco() {
         };
 
         const onTurnChanged = ({ currentPlayerIndex: cpi, deckCount: dc }) => {
-            setCPI(cpi); setDeckCount(dc); setCardRevealed(false); setCurrentCard(null); setBottoneAttivo(false);
+            setCPI(cpi); setDeckCount(dc); setCardRevealed(false); setCurrentCard(null);
+            setBottoneAttivo(false); setBottoneDelay(null);
         };
         const onDeckShuffled = ({ deckCount: dc }) => { setDeckCount(dc); setCurrentCard(null); setCardRevealed(false); };
         const onPlayersUpdated = (updatedPlayers) => { setPlayers(updatedPlayers); const me = updatedPlayers.find((pl) => pl.index === playerIndex); setIsHost(Boolean(me?.isHost)); };
@@ -172,7 +179,6 @@ export default function Gioco() {
         return () => document.removeEventListener("keydown", handleKey);
     }, [aiutoAperto, giocatoriAperti, menuAperto]);
 
-    // Auto-dismiss toast dopo 2.5s
     useEffect(() => {
         if (!forceToast) return;
         const t = setTimeout(() => setForceToast(null), 2500);
@@ -196,10 +202,7 @@ export default function Gioco() {
     const handleForzaCarta = (carta) => {
         if (!isMyTurn || cardRevealed) return;
         socket.emit("force-card", { valore: carta }, (res) => {
-            if (res?.ok) {
-                setForceToast(carta);
-                setAiuto(false);
-            }
+            if (res?.ok) { setForceToast(carta); setAiuto(false); }
         });
     };
 
@@ -272,7 +275,6 @@ export default function Gioco() {
                     </div>
                 </div>
 
-                {/* Toast conferma carta forzata */}
                 {forceToast && (
                     <div className="gioco-force-toast">
                         🃏 Prossima carta: <strong>{forceToast}</strong>
@@ -289,7 +291,7 @@ export default function Gioco() {
                 {beviAttivo    && <BeviAnimation    giocatore={beviPlayerName}    onClose={() => setBeviAttivo(false)} />}
                 {donneAttivo   && <DonneAnimation   onClose={() => setDonneAttivo(false)} />}
                 {uominiAttivo  && <UominiAnimation  onClose={() => setUominiAttivo(false)} />}
-                {bottoneAttivo && <BottoneAnimation playerIndex={playerIndex} onClose={() => setBottoneAttivo(false)} />}
+                {bottoneAttivo && <BottoneAnimation playerIndex={playerIndex} delay={bottoneDelay} onClose={() => { setBottoneAttivo(false); setBottoneDelay(null); }} />}
                 {vikingAttivo  && <VikingAnimation  giocatore={vikingPlayerName}  onClose={() => setVikingAttivo(false)} />}
                 {mirrorAttivo  && <MirrorAnimation  giocatore={mirrorPlayerName}  onClose={() => setMirrorAttivo(false)} />}
                 {mattoAttivo   && <MattoAnimation   giocatore={mattoPlayerName}   onClose={() => setMattoAttivo(false)} />}

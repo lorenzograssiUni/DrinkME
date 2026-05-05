@@ -20,7 +20,6 @@ const rooms = new Map();
 const SEMI = ["F", "P", "C", "Q"];
 const VALORI = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
-// Mappa carta regola -> valore numerico nel mazzo
 const REGOLA_TO_VALORE = {
     "2": "2", "3": "3", "4": "4", "5": "5", "6": "6",
     "7": "7", "8": "8", "9": "9", "10": "10",
@@ -41,10 +40,7 @@ function generaCodice() {
 }
 
 function getSafePlayers(players, hostSocketId) {
-    return players.map((p) => ({
-        ...p,
-        isHost: p.socketId === hostSocketId && p.connected,
-    }));
+    return players.map((p) => ({ ...p, isHost: p.socketId === hostSocketId && p.connected }));
 }
 
 function getNextHost(room) {
@@ -150,20 +146,15 @@ io.on("connection", (socket) => {
         cb?.({ ok: true });
     });
 
-    // Forza la prossima carta pescata (solo per test/debug)
     socket.on("force-card", ({ valore }, cb) => {
         const room = rooms.get(socket.data.roomCode);
         if (!room || room.status !== "playing") return cb?.({ ok: false });
         if (room.cardRevealed) return cb?.({ ok: false, error: "Carta già scoperta" });
-
         const valoreNumerico = REGOLA_TO_VALORE[valore] ?? valore;
         const idx = room.deck.findIndex((c) => c.startsWith(`${valoreNumerico}-`));
         if (idx === -1) return cb?.({ ok: false, error: "Carta non trovata nel mazzo" });
-
-        // Sposta la carta trovata in cima al mazzo (posizione 0)
         const [carta] = room.deck.splice(idx, 1);
         room.deck.unshift(carta);
-
         cb?.({ ok: true, carta });
     });
 
@@ -174,24 +165,21 @@ io.on("connection", (socket) => {
         if (room.cardRevealed) return cb?.({ ok: false, error: "Carta già pescata" });
         if (room.deck.length === 0) return cb?.({ ok: false, error: "Mazzo esaurito" });
 
-        // Prende sempre la prima carta (se force-card l'ha messa in cima, esce quella)
         const card = room.deck.shift();
         room.currentCard = card;
         room.cardRevealed = true;
 
         const valore = card.split("-")[0];
+        let buttonDelay = null;
 
         if (valore === "7") {
             const connectedPlayers = room.players.filter((p) => p.connected);
-            const delay = Math.floor(Math.random() * 9000) + 1000;
+            // delay calcolato qui e inviato al client nel payload — il client gestisce il proprio timer
+            buttonDelay = Math.floor(Math.random() * 9000) + 1000;
             room.buttonGame = {
                 pressed: [],
                 total: connectedPlayers.length,
-                delay,
-                timer: setTimeout(() => {
-                    if (!room.buttonGame) return;
-                    io.to(room.code).emit("button-game-start", { total: room.buttonGame.total });
-                }, delay),
+                delay: buttonDelay,
             };
         }
 
@@ -199,6 +187,7 @@ io.on("connection", (socket) => {
             card,
             deckCount: room.deck.length,
             currentPlayerIndex: room.currentPlayerIndex,
+            buttonDelay, // null se non è un 7, numero in ms se è un 7
         });
 
         cb?.({ ok: true });
@@ -219,7 +208,6 @@ io.on("connection", (socket) => {
             const loserPlayer = room.players.find((p) => p.index === playerIndex);
             const loserName = loserPlayer?.name || `Giocatore ${playerIndex + 1}`;
             io.to(room.code).emit("button-loser", { loserIndex: playerIndex, loserName });
-            clearTimeout(room.buttonGame.timer);
             room.buttonGame = null;
         }
         cb?.({ ok: true });
@@ -230,7 +218,7 @@ io.on("connection", (socket) => {
         if (!room || room.status !== "playing") return cb?.({ ok: false, error: "Partita non attiva" });
         if (socket.data.playerIndex !== room.currentPlayerIndex) return cb?.({ ok: false, error: "Non è il tuo turno" });
         if (!room.cardRevealed) return cb?.({ ok: false, error: "Nessuna carta da girare" });
-        if (room.buttonGame) { clearTimeout(room.buttonGame.timer); room.buttonGame = null; }
+        room.buttonGame = null;
         room.cardRevealed = false;
         room.currentCard = null;
         room.currentPlayerIndex = getNextConnectedPlayerIndex(room, room.currentPlayerIndex);
@@ -242,7 +230,7 @@ io.on("connection", (socket) => {
         const room = rooms.get(socket.data.roomCode);
         if (!room) return cb?.({ ok: false, error: "Stanza non trovata" });
         if (room.hostSocketId !== socket.id) return cb?.({ ok: false, error: "Solo l'host può rimescolare" });
-        if (room.buttonGame) { clearTimeout(room.buttonGame.timer); room.buttonGame = null; }
+        room.buttonGame = null;
         room.deck = creaMazzo();
         room.currentCard = null;
         room.cardRevealed = false;
@@ -254,7 +242,7 @@ io.on("connection", (socket) => {
         const room = rooms.get(socket.data.roomCode);
         if (!room) return cb?.({ ok: false, error: "Stanza non trovata" });
         if (room.hostSocketId !== socket.id) return cb?.({ ok: false, error: "Solo l'host può ricominciare" });
-        if (room.buttonGame) { clearTimeout(room.buttonGame.timer); room.buttonGame = null; }
+        room.buttonGame = null;
         room.status = "waiting";
         room.deck = [];
         room.currentCard = null;
@@ -281,7 +269,6 @@ io.on("connection", (socket) => {
                 const loserPlayer = room.players.find((p) => p.index === lastIdx);
                 const loserName = loserPlayer?.name || `Giocatore ${lastIdx + 1}`;
                 io.to(room.code).emit("button-loser", { loserIndex: lastIdx, loserName });
-                clearTimeout(room.buttonGame.timer);
                 room.buttonGame = null;
             }
         }
