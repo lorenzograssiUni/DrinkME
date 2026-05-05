@@ -3,39 +3,33 @@ import { socket } from "../socket";
 import "./BottoneAnimation.css";
 
 export default function BottoneAnimation({ players, playerIndex, onClose }) {
-    const [fase, setFase] = useState("attesa"); // "attesa" | "gioca" | "risultato"
+    const [bottoneVisibile, setBottoneVisibile] = useState(false);
     const [haPressed, setHaPressed] = useState(false);
     const [pressedCount, setPressedCount] = useState(0);
-    const [total, setTotal] = useState(players?.filter(p => p.connected !== false).length ?? 1);
+    const [total] = useState(players?.filter(p => p.connected !== false).length ?? 1);
     const [loser, setLoser] = useState(null);
     const [pressing, setPressing] = useState(false);
 
+    // Delay randomico 1-10s lato client, uguale per tutti grazie al server
     useEffect(() => {
-        const onGameStart = ({ total: t }) => {
-            setTotal(t);
-            setFase("gioca");
-        };
-        const onButtonPressed = ({ pressedCount: pc, total: t }) => {
-            setPressedCount(pc);
-            setTotal(t);
-        };
-        const onButtonLoser = ({ loserIndex, loserName }) => {
-            setLoser({ loserIndex, loserName });
-            setFase("risultato");
-        };
+        const delay = Math.floor(Math.random() * 9000) + 1000;
+        const t = setTimeout(() => setBottoneVisibile(true), delay);
+        return () => clearTimeout(t);
+    }, []);
 
-        socket.on("button-game-start", onGameStart);
+    useEffect(() => {
+        const onButtonPressed = ({ pressedCount: pc }) => setPressedCount(pc);
+        const onButtonLoser = ({ loserIndex, loserName }) => setLoser({ loserIndex, loserName });
         socket.on("button-pressed", onButtonPressed);
         socket.on("button-loser", onButtonLoser);
         return () => {
-            socket.off("button-game-start", onGameStart);
             socket.off("button-pressed", onButtonPressed);
             socket.off("button-loser", onButtonLoser);
         };
     }, []);
 
     const handlePress = () => {
-        if (haPressed || fase !== "gioca") return;
+        if (haPressed || !bottoneVisibile || loser) return;
         setPressing(true);
         setTimeout(() => setPressing(false), 150);
         setHaPressed(true);
@@ -45,7 +39,7 @@ export default function BottoneAnimation({ players, playerIndex, onClose }) {
     const isLoser = loser?.loserIndex === playerIndex;
 
     return (
-        <div className="bottone-overlay" onClick={fase === "risultato" ? onClose : undefined}>
+        <div className="bottone-overlay" onClick={loser ? onClose : undefined}>
             <div className="bottone-circle">
                 <span className="bottone-bg b1">⚡</span>
                 <span className="bottone-bg b2">💥</span>
@@ -60,13 +54,13 @@ export default function BottoneAnimation({ players, playerIndex, onClose }) {
                 <span className="bottone-bg b11">⚡</span>
                 <span className="bottone-bg b12">💥</span>
 
-                {fase === "attesa" && (
-                    <div className="bottone-countdown">
-                        <span className="bottone-countdown-emoji">⏳</span>
+                {loser ? (
+                    <div className={`bottone-result${isLoser ? " loser" : " winner"}`}>
+                        <span className="bottone-result-emoji">{isLoser ? "🍺" : "🎉"}</span>
                     </div>
-                )}
-
-                {fase === "gioca" && (
+                ) : !bottoneVisibile ? (
+                    <span className="bottone-countdown-emoji">⏳</span>
+                ) : (
                     <button
                         className={`bottone-btn${haPressed ? " pressed" : ""}${pressing ? " pressing" : ""}`}
                         onClick={handlePress}
@@ -75,38 +69,24 @@ export default function BottoneAnimation({ players, playerIndex, onClose }) {
                         {haPressed ? "✓" : "PRESS ME"}
                     </button>
                 )}
-
-                {fase === "risultato" && (
-                    <div className={`bottone-result${isLoser ? " loser" : " winner"}`}>
-                        <span className="bottone-result-emoji">{isLoser ? "🍺" : "🎉"}</span>
-                    </div>
-                )}
             </div>
 
-            {fase === "attesa" && (
+            {loser ? (
+                <>
+                    <p className="bottone-titolo">{isLoser ? "HAI PERSO! 😭" : "SALVO! 🎉"}</p>
+                    <p className="bottone-sottotitolo">{loser.loserName} è stato l'ultimo — deve bere!</p>
+                    <span className="bottone-hint">Tocca per continuare</span>
+                </>
+            ) : !bottoneVisibile ? (
                 <>
                     <p className="bottone-titolo">PREPARATEVI!</p>
                     <p className="bottone-sottotitolo">Il bottone apparirà a breve... ⏳</p>
                 </>
-            )}
-
-            {fase === "gioca" && (
+            ) : (
                 <>
                     <p className="bottone-titolo">PREMI IL BOTTONE!</p>
-                    <p className="bottone-sottotitolo">
-                        {pressedCount}/{total} hanno premuto — l'ultimo beve! 🍺
-                    </p>
+                    <p className="bottone-sottotitolo">{pressedCount}/{total} hanno premuto — l'ultimo beve! 🍺</p>
                     <span className="bottone-hint">Premi prima degli altri!</span>
-                </>
-            )}
-
-            {fase === "risultato" && (
-                <>
-                    <p className="bottone-titolo">{isLoser ? "HAI PERSO! 😭" : "SALVO! 🎉"}</p>
-                    <p className="bottone-sottotitolo">
-                        {loser.loserName} è stato l'ultimo — deve bere!
-                    </p>
-                    <span className="bottone-hint">Tocca per continuare</span>
                 </>
             )}
         </div>
