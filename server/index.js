@@ -174,7 +174,6 @@ io.on("connection", (socket) => {
 
         if (valore === "7") {
             const connectedPlayers = room.players.filter((p) => p.connected);
-            // delay calcolato qui e inviato al client nel payload — il client gestisce il proprio timer
             buttonDelay = Math.floor(Math.random() * 9000) + 1000;
             room.buttonGame = {
                 pressed: [],
@@ -187,10 +186,17 @@ io.on("connection", (socket) => {
             card,
             deckCount: room.deck.length,
             currentPlayerIndex: room.currentPlayerIndex,
-            buttonDelay, // null se non è un 7, numero in ms se è un 7
+            buttonDelay,
         });
 
         cb?.({ ok: true });
+    });
+
+    // Restituisce il totale giocatori del buttonGame attivo (usato dal client dopo il delay locale)
+    socket.on("get-button-total", (cb) => {
+        const room = rooms.get(socket.data.roomCode);
+        if (!room || !room.buttonGame) return cb?.({ ok: false });
+        cb?.({ ok: true, total: room.buttonGame.total });
     });
 
     socket.on("press-button", (cb) => {
