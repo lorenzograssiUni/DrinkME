@@ -108,7 +108,7 @@ io.on("connection", socket => {
             buttonDelay = Math.floor(Math.random()*9000)+1000;
             room.buttonGame = {pressed:[],total,started:Date.now(),delay:buttonDelay};
             // subito broadcast dello stato iniziale 0/total, così il client non mostra 0/?
-            io.to(room.code).emit("button-pressed", { pressedCount: 0, total });
+            io.to(room.code).emit("button-pressed", { pressedCount: 0, total, pressedIndices: [] });
         }
 
         io.to(room.code).emit("card-drawn", {
@@ -137,7 +137,7 @@ io.on("connection", socket => {
             const total=room.players.filter(p=>p.connected).length;
             buttonDelay=Math.floor(Math.random()*9000)+1000;
             room.buttonGame={pressed:[],total,started:Date.now(),delay:buttonDelay};
-            io.to(room.code).emit("button-pressed", { pressedCount: 0, total });
+            io.to(room.code).emit("button-pressed", { pressedCount: 0, total, pressedIndices: [] });
         }
 
         io.to(room.code).emit("card-drawn",{card,deckCount:room.deck.length,currentPlayerIndex:room.currentPlayerIndex,buttonDelay});
@@ -151,7 +151,7 @@ io.on("connection", socket => {
         if(room.buttonGame.pressed.includes(pi)) return cb?.({ok:false,error:"Già premuto"});
         room.buttonGame.pressed.push(pi);
         const {pressed,total}=room.buttonGame;
-        io.to(room.code).emit("button-pressed",{pressedCount:pressed.length,total});
+        io.to(room.code).emit("button-pressed",{pressedCount:pressed.length,total,pressedIndices:pressed});
         if(pressed.length>=total) {
             const loserPlayer=room.players.find(p=>p.index===pi);
             const loserName=loserPlayer?.name||`Giocatore ${pi+1}`;

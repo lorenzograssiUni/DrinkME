@@ -302,7 +302,17 @@ export default function Gioco() {
                 {beviAttivo    && <BeviAnimation    giocatore={beviPlayerName}    onClose={() => setBeviAttivo(false)} />}
                 {donneAttivo   && <DonneAnimation   onClose={() => setDonneAttivo(false)} />}
                 {uominiAttivo  && <UominiAnimation  onClose={() => setUominiAttivo(false)} />}
-                {bottoneAttivo && <BottoneAnimation playerIndex={playerIndex} delay={bottoneDelay} onClose={() => { setBottoneAttivo(false); setBottoneDelay(null); }} />}
+                {bottoneAttivo && (
+                    <BottoneAnimation
+                        playerIndex={playerIndex}
+                        players={players}
+                        delay={bottoneDelay}
+                        onClose={() => {
+                            setBottoneAttivo(false);
+                            setBottoneDelay(null);
+                        }}
+                    />
+                )}
                 {vikingAttivo  && <VikingAnimation  giocatore={vikingPlayerName}  onClose={() => setVikingAttivo(false)} />}
                 {mirrorAttivo  && <MirrorAnimation  giocatore={mirrorPlayerName}  onClose={() => setMirrorAttivo(false)} />}
                 {mattoAttivo   && <MattoAnimation   giocatore={mattoPlayerName}   onClose={() => setMattoAttivo(false)} />}

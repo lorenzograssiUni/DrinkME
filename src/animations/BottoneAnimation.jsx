@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { socket } from "../socket";
 import "./BottoneAnimation.css";
 
-export default function BottoneAnimation({ playerIndex, delay, onClose }) {
+export default function BottoneAnimation({ playerIndex, players = [], delay, onClose }) {
     const [fase, setFase] = useState("attesa"); // attesa | attivo | premuto | fine
     const [pressedCount, setPressedCount] = useState(0);
     const [total, setTotal] = useState("?");
+    const [pressedIndices, setPressedIndices] = useState([]);
     const [loser, setLoser] = useState(null); // { loserIndex, loserName }
     const timerRef = useRef(null);
 
@@ -18,9 +19,10 @@ export default function BottoneAnimation({ playerIndex, delay, onClose }) {
 
     // Ascolta gli eventi socket
     useEffect(() => {
-        const onPressed = ({ pressedCount: pc, total: t }) => {
+        const onPressed = ({ pressedCount: pc, total: t, pressedIndices: pi = [] }) => {
             setPressedCount(pc);
             setTotal(t);
+            setPressedIndices(pi);
         };
         const onLoser = ({ loserIndex, loserName }) => {
             setLoser({ loserIndex, loserName });
@@ -42,6 +44,11 @@ export default function BottoneAnimation({ playerIndex, delay, onClose }) {
         });
     };
 
+    const pressedPlayers = pressedIndices
+        .map((idx) => players.find((p) => p.index === idx))
+        .filter(Boolean)
+        .map((p) => p.name || `Giocatore ${p.index + 1}`);
+
     // ---- RENDER ----
     if (fase === "fine" && loser) {
         const isMe = loser.loserIndex === playerIndex;
@@ -57,27 +64,66 @@ export default function BottoneAnimation({ playerIndex, delay, onClose }) {
         );
     }
 
+    const isPremuto = fase === "premuto";
+
     return (
         <div className="bottone-overlay">
             <div className="bottone-emoji-top">{fase === "attivo" || fase === "premuto" ? "🔴" : "⏳"}</div>
 
             <p className="bottone-titolo">
-                {fase === "attesa" ? "PREMI IL BOTTONE QUANDO È ATTIVO!" : "PREMI IL BOTTONE!"}
-            </p>
-
-            <p className="bottone-sottotitolo">
                 {fase === "attesa"
-                    ? "Aspetta il segnale..."
-                    : `${pressedCount}/${total} hanno premuto — l'ultimo beve! 🍺`}
+                    ? "PREMI IL BOTTONE QUANDO È ATTIVO!"
+                    : isPremuto
+                        ? "Hai premuto! Attendi gli altri..."
+                        : "PREMI IL BOTTONE!"}
             </p>
 
-            <button
-                className={["bottone-btn", fase === "attesa" ? "disabilitato" : "", fase === "attivo" ? "attivo" : "", fase === "premuto" ? "premuto" : ""].filter(Boolean).join(" ")}
-                onClick={handlePress}
-                disabled={fase !== "attivo"}
-            >
-                {fase === "premuto" ? "✓ PREMUTO" : "PRESS ME"}
-            </button>
+            {isPremuto ? (
+                <>
+                    <p className="bottone-sottotitolo">
+                        {pressedCount}/{total} hanno già premuto:
+                    </p>
+                    <table className="bottone-tabella">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Giocatore</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pressedPlayers.map((name, i) => (
+                                <tr key={i}>
+                                    <td>{i + 1}</td>
+                                    <td>{name}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </>
+            ) : (
+                <>
+                    <p className="bottone-sottotitolo">
+                        {fase === "attesa"
+                            ? "Aspetta il segnale..."
+                            : `${pressedCount}/${total} hanno premuto — l'ultimo beve! 🍺`}
+                    </p>
+
+                    <button
+                        className={[
+                            "bottone-btn",
+                            fase === "attesa" ? "disabilitato" : "",
+                            fase === "attivo" ? "attivo" : "",
+                            fase === "premuto" ? "premuto" : "",
+                        ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        onClick={handlePress}
+                        disabled={fase !== "attivo"}
+                    >
+                        {fase === "premuto" ? "✓ PREMUTO" : "PRESS ME"}
+                    </button>
+                </>
+            )}
         </div>
     );
 }
