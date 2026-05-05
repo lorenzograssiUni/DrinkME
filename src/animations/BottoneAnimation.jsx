@@ -7,8 +7,8 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
     const [pressedCount, setPressedCount] = useState(0);
     const [total, setTotal] = useState("?");
     const [pressedIndices, setPressedIndices] = useState([]);
+    const [pressedTimes, setPressedTimes] = useState([]);
     const [loser, setLoser] = useState(null); // { loserIndex, loserName }
-    const [showRanking, setShowRanking] = useState(false);
     const timerRef = useRef(null);
 
     // Avvia il timer locale al mount — nessuna dipendenza da socket per l'attivazione
@@ -20,10 +20,11 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
 
     // Ascolta gli eventi socket
     useEffect(() => {
-        const onPressed = ({ pressedCount: pc, total: t, pressedIndices: pi = [] }) => {
+        const onPressed = ({ pressedCount: pc, total: t, pressedIndices: pi = [], pressedTimes: pt = [] }) => {
             setPressedCount(pc);
             setTotal(t);
             setPressedIndices(pi);
+            setPressedTimes(pt);
         };
         const onLoser = ({ loserIndex, loserName }) => {
             setLoser({ loserIndex, loserName });
@@ -40,14 +41,17 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
     const handlePress = () => {
         if (fase !== "attivo") return;
         setFase("premuto");
-        setShowRanking(false);
         socket.emit("press-button", (res) => {
             if (!res?.ok) setFase("attivo"); // rollback se errore server
         });
     };
 
-    const pressedPlayers = pressedIndices
-        .map((idx) => players.find((p) => p.index === idx))
+    const pressedEntries = pressedIndices
+        .map((idx, i) => {
+            const player = players.find((p) => p.index === idx);
+            if (!player) return null;
+            return { player, timeMs: pressedTimes[i] ?? null };
+        })
         .filter(Boolean);
 
     // ---- RENDER ----
@@ -85,59 +89,28 @@ export default function BottoneAnimation({ playerIndex, players = [], delay, onC
                         {pressedCount}/{total} hanno già premuto:
                     </p>
                     <ol className="aiuto-list">
-                        {pressedPlayers.map((p) => (
-                            <li
-                                key={p.index}
-                                className={[
-                                    "aiuto-item",
-                                    p.index === playerIndex ? "aiuto-item--attivo" : "",
-                                ]
-                                    .join(" ")
-                                    .trim()}
-                            >
-                                <span className="aiuto-carta">{p.index + 1}</span>
-                                <span className="aiuto-testo">
-                                    {p.name || `Giocatore ${p.index + 1}`}
-                                    {p.index === playerIndex ? " (tu)" : ""}
-                                </span>
-                            </li>
-                        ))}
+                        {pressedEntries.map(({ player: p, timeMs }, i) => {
+                            const seconds = timeMs != null ? (timeMs / 1000).toFixed(2) : null;
+                            return (
+                                <li
+                                    key={p.index}
+                                    className={[
+                                        "aiuto-item",
+                                        p.index === playerIndex ? "aiuto-item--attivo" : "",
+                                    ]
+                                        .join(" ")
+                                        .trim()}
+                                >
+                                    <span className="aiuto-carta">{i + 1}</span>
+                                    <span className="aiuto-testo">
+                                        {p.name || `Giocatore ${p.index + 1}`}
+                                        {p.index === playerIndex ? " (tu)" : ""}
+                                        {seconds ? ` — ${seconds}s` : ""}
+                                    </span>
+                                </li>
+                            );
+                        })}
                     </ol>
-
-                    {pressedPlayers.length > 0 && (
-                        <button
-                            className="bottone-ranking-btn"
-                            type="button"
-                            onClick={() => setShowRanking(true)}
-                        >
-                            Vedi ordine dei click
-                        </button>
-                    )}
-
-                    {showRanking && (
-                        <div className="bottone-ranking">
-                            <p className="bottone-sottotitolo">Ordine dal più veloce al più lento:</p>
-                            <ol className="aiuto-list">
-                                {pressedPlayers.map((p, i) => (
-                                    <li
-                                        key={p.index}
-                                        className={[
-                                            "aiuto-item",
-                                            p.index === playerIndex ? "aiuto-item--attivo" : "",
-                                        ]
-                                            .join(" ")
-                                            .trim()}
-                                    >
-                                        <span className="aiuto-carta">{i + 1}</span>
-                                        <span className="aiuto-testo">
-                                            {p.name || `Giocatore ${p.index + 1}`}
-                                            {p.index === playerIndex ? " (tu)" : ""}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ol>
-                        </div>
-                    )}
                 </>
             ) : (
                 <>
