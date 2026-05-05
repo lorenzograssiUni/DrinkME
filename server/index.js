@@ -147,7 +147,18 @@ io.on("connection", socket => {
     socket.on("press-button", cb => {
         const room=rooms.get(socket.data.roomCode);
         if(!room||!room.buttonGame) return cb?.({ok:false,error:"Nessun gioco attivo"});
-        const pi=socket.data.playerIndex;
+
+        // Recupera in modo robusto l'indice del giocatore
+        let pi = socket.data.playerIndex;
+        if (pi === undefined || pi === null) {
+            const player = room.players.find(p => p.socketId === socket.id);
+            if (!player) {
+                return cb?.({ ok:false, error:"Giocatore non trovato" });
+            }
+            pi = player.index;
+            socket.data.playerIndex = pi;
+        }
+
         if(room.buttonGame.pressed.includes(pi)) return cb?.({ok:false,error:"Già premuto"});
         room.buttonGame.pressed.push(pi);
         const {pressed,total}=room.buttonGame;
